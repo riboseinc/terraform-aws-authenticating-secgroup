@@ -1,0 +1,148 @@
+= Terraform Module For Dynamically Managing Security Group IPs
+
+This module is available on the https://registry.terraform.io/modules/riboseinc/authenticating-secgroup/aws/[Terraform Registry].
+
+
+== Components
+
+- API Gateway that performs authorization.
+- On-demand Lambda function (linked to API Gateway method `POST|DELETE /connection`): to add/remove rules on-demand
+- Continuous Lambda function: to clean up expired rules
+
+
+== On-demand Lambda Function: Adding/Removing Rules
+
+This is the Lambda function that runs `authorize-security-group-ingress` and
+`revoke-security-group-ingress` on-demand on the given security group.
+
+Steps:
+
+1. Authenticate the user via AWS IAM (Signature Version 4).
+.. Eligibility to authenticate is set in a policy outside of this module.
+.. The user will provide an AWS v4 signature for authentication.
+.. Return 403 if not authorized.
+
+2. Once authenticated,
+.. Find out the source IP address (a host "/32").
+
+.. If the request is a `POST /connection`
+... The function will add a `authorize-security-group-ingress` rule for this
+  source IP address, with a description that indicates the "time" that this rule
+  was added. Return 201.
+
+... If the source IP address is already in the security-group, update the description using `update-security-group-rule-descriptions-ingress` to reflect the latest time.
+... Return 200.
+
+.. If the request is a `DELETE /connection`
+... If the source IP address is in the security-group, issue a `revoke-security-group-ingress` on it. Return 200.
+... If the source IP address is not in the security group, do nothing. Return 404.
+
+3. Done.
+
+== Continuous Lambda Function: Removing Rules
+
+This is the Lambda function that runs `revoke-security-group-ingress` on the
+given security group on rule expiry.
+
+This AWS Lambda function runs every X seconds, and its sole task is to clean
+out the security group that has stale rules.
+
+Steps:
+
+1. The function will describe all rules in the given security group.
+
+2. For every rule, it will check the description for the time of last update.
+.. If the elapsed time is less than the configured X seconds, don't do anything.
+.. If the elapsed time is more than the configured X seconds, it means that the
+  rule has expired, and it should execute `revoke-security-group-ingress` on it.
+  (e.g., if all rules are expired, the security group should now contain no rules)
+
+3. Done.
+
+
+== Sample Usage
+
+[source,go]
+----
+variable "aws-account-id" {
+  default = "my-aws-account-id"
+}
+
+module "dynamic-secgroup" {
+  source = "riboseinc/authenticating-secgroup/aws"
+  aws-account-id = "${var.aws-account-id}"
+
+  # Description of this secgroup
+  description = "Developer SSH Access"
+
+  # Where to add the rules to
+  security-groups = [
+    "${aws_security_group.instance_group_1_ssh.id}",
+    "${aws_security_group.instance_group_2_ssh.id}"
+  ]
+
+  # Parameters for creating security group rules
+  secgroup-rule-type      = "ingress"
+  secgroup-rule-from_port = 22
+  secgroup-rule-to_port   = 22
+  secgroup-rule-protocol  = "-1"
+
+  # Time to expiry for every rule.
+  # Default: 600 seconds.
+  time_to_expire = "600"
+}
+
+# A group we want to provide SSH access to
+resource "aws_iam_group" "developers" {
+  name = "developers"
+}
+
+# Who can access this API (i.e., who can be added to the dynamic secgroup)
+resource "aws_iam_group_policy_attachment" "developers-access-ssh" {
+  group      = "${aws_iam_group.developers.name}"
+  policy_arn = "${module.dynamic-secgroup.api-gateway-access-policy-arn}"
+}
+
+
+# Some outputs
+
+output "dynamic-secgroup-api-gateway-arn" {
+  value = "${module.dynamic-secgroup.api-gateway-arn}"
+}
+
+output "dynamic-secgroup-api-gateway-access-policy-arn" {
+  value = "${module.dynamic-secgroup.api-gateway-access-policy-arn}"
+}
+----
+
+
+The `module.dynamic-secgroup.api-gateway-access-policy-arn` is something like:
+
+[source,go]
+----
+resource "aws_iam_policy" "secgroup-access-policy" {
+  name        = "secgroup-access-policy"
+  description = "Policy: ${var.description}"
+  policy      = "${data.aws_iam_policy_document.secgroup-access-policy-doc.json"
+}
+
+data "aws_iam_policy_document" "secgroup-access-policy-doc" {
+  policy_id = "ssh-access-policy"
+
+  statement {
+    sid = "AccessSecurityGroup"
+    effect = "Allow"
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resource: [
+      "arn:aws:execute-api:${var.aws-region}:${var.aws-account-id}:${aws_api_gateway_rest_api.api.name}/*/DELETE/connection",
+      "arn:aws:execute-api:${var.aws-region}:${var.aws-account-id}:${aws_api_gateway_rest_api.api.name}/*/POST/connection"
+    ]
+  }
+}
+
+output "api-gateway-access-policy-arn" {
+  value = "aws_iam_policy.secgroup-access-policy.arn"
+}
+----
