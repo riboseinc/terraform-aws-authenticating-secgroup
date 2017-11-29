@@ -82,7 +82,7 @@ module "dynamic-secgroup" {
   ]
 
   # Parameters for creating security group rules
-  secgroup-rule-type      = "ingress"
+  # secgroup-rule-type      = "ingress" we dont need type
   secgroup-rule-from_port = 22
   secgroup-rule-to_port   = 22
   secgroup-rule-protocol  = "-1"
