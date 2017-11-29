@@ -1,0 +1,13 @@
+.idea/
+*.pyc
+*.iml
+
+env/
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+python.zip
+.src/
+.terraform.*
+
+modules/tools/python/test/app/
