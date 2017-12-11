@@ -26,8 +26,8 @@ class Rule():
                         {
                             'CidrIp': self.cidr_ip,
                             'Description': f'{expire.isoformat()}{time.strftime("%z")}'
-                        },
-                    ],
+                        }
+                    ]
                 }
             ]
         }

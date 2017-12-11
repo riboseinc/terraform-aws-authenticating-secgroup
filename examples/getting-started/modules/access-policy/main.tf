@@ -1,5 +1,12 @@
+variable "execution_resources" {
+  type = "list"
+}
+
+variable "description" {}
+
 resource "aws_iam_policy" "access_policy" {
-  name_prefix = "${var.name_prefix}"
+  name = "secgroup-access-policy"
+  description = "Policy: ${var.description}"
   policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
 }
 
@@ -10,7 +17,11 @@ data "aws_iam_policy_document" "access_policy_doc" {
       "execute-api:Invoke"
     ]
     resources = [
-      "${local.execute_api_arn}"
+      "${var.execution_resources}"
     ]
   }
+}
+
+output "access-policy-arn" {
+  value = "${aws_iam_policy.access_policy.arn}"
 }

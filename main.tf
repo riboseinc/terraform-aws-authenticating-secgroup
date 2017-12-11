@@ -1,6 +1,6 @@
 resource "aws_api_gateway_rest_api" "manage_secgroup_ips_api" {
   name        = "terraform-aws-authenticating-secgroup"
-  description = "Dynamically Managing Security Group IPs API"
+  description = "${var.description}"
 }
 
 resource "aws_api_gateway_resource" "manage_secgroup_ips_endpoint" {

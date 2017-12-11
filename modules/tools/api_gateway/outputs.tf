@@ -1,7 +1,7 @@
 output "invoke_url" {
-  value = "${aws_api_gateway_deployment.deployment.invoke_url}"
+  value = "${aws_api_gateway_deployment.deployment.invoke_url}${var.path}"
 }
 
-output "execution_arn" {
-  value = "${aws_api_gateway_deployment.deployment.execution_arn}"
+output "execution_resource" {
+  value = "${local.execute_api_arn}"
 }

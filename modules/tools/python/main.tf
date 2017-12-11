@@ -16,9 +16,7 @@ data "archive_file" "service_py" {
   depends_on  = [
     "template_dir.service_py"
   ]
-
   type        = "zip"
   output_path = "${path.module}/python.zip"
-
   source_dir  = "${template_dir.service_py.destination_dir}"
 }

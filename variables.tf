@@ -6,6 +6,11 @@ variable "aws_region" {
   description = "AWS region"
 }
 
+variable "description" {
+  description = "Description of this secgroup"
+  default = "Dynamically Managing Security Group IPs API"
+}
+
 variable "name_prefix" {
   default = "dyna-secgroup"
   description = "Creates a unique name beginning with the specified prefix, useful for searching later"

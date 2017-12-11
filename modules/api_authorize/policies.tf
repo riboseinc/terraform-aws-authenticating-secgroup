@@ -44,25 +44,3 @@ resource "aws_iam_role" "lambda_sts_role" {
   description        = "to invoke lambda: ${local.fn_name}"
   assume_role_policy = "${data.aws_iam_policy_document.lambda_policy.json}"
 }
-
-/** API Gateway Role */
-//data "aws_iam_policy_document" "gateway_policy" {
-//  statement {
-//    effect  = "Allow",
-//    actions = [
-//      "sts:AssumeRole",
-//    ]
-//
-//    principals {
-//      type        = "Service"
-//      identifiers = [
-//        "apigateway.amazonaws.com"
-//      ]
-//    }
-//  }
-//}
-//
-//resource "aws_iam_role" "gateway_sts_role" {
-//  assume_role_policy = "${data.aws_iam_policy_document.lambda_policy.json}"
-//}
-
