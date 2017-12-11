@@ -1,41 +1,33 @@
+variable "aws_account_id" {}
+variable "aws_access_key" {}
+variable "aws_secret_key" {}
+variable "aws_region" {}
+variable "description" {}
+
 module "dynamic-secgroup" {
-  //  source = "riboseinc/authenticating-secgroup/aws"
-  source                  = "../.."
-  aws_account_id          = "${var.aws_account_id}"
-  aws_region              = "us-west-2"
+  source         = "modules/dynamic-secgroup"
+  description    = "${var.description}"
 
-  # Description of this secgroup
-  //  description             = "Developer SSH Access"
-
-  # Where to add the rules to
-  security_groups         = [
-    "sg-df7a88a3",
-    "sg-c9c72eb5"
-    //    "${aws_security_group.instance_group_1_ssh.id}",
-    //    "${aws_security_group.instance_group_2_ssh.id}"
-  ]
-  //  security_groups = "sg-df7a88a3,sg-c9c72eb5"
-
-  # Parameters for creating security group rules
-  //  secgroup_rule_type      = "ingress"
-  secgroup_rule_from_port = 22
-  secgroup_rule_to_port   = 22
-  secgroup_rule_protocol  = "tcp"
-
-  # Time to expiry for every rule.
-  # Default: 600 seconds.
-  time_to_expire          = 600
+  aws_account_id = "${var.aws_account_id}"
+  aws_access_key = "${var.aws_access_key}"
+  aws_region     = "${var.aws_region}"
+  aws_secret_key = "${var.aws_secret_key}"
 }
 
-# A group we want to provide SSH access to
-//resource "aws_iam_group" "developers" {
-//  name = "developers"
-//}
+module "access-policy" {
+  source              = "modules/access-policy"
+  description         = "Policy: ${var.description}"
+  execution_resources = "${module.dynamic-secgroup.dynamic-secgroup-api-execution-resources}"
+}
 
-# Who can access this API (i.e., who can be added to the dynamic secgroup)
-//resource "aws_iam_group_policy_attachment" "developers-access-ssh" {
-//  group      = "${aws_iam_group.developers.name}"
-//  policy_arn = "${module.dynamic-secgroup.api-gateway-access-policy-arn}"
-//}
+output "dynamic-secgroup-api-invoke-url" {
+  value = "${module.dynamic-secgroup.dynamic-secgroup-api-invoke-urls}"
+}
 
+output "dynamic-secgroup-api-excutions" {
+  value = "${module.dynamic-secgroup.dynamic-secgroup-api-execution-resources}"
+}
 
+output "api-gateway-access-policy-arn" {
+  value = "${module.access-policy.access-policy-arn}"
+}
