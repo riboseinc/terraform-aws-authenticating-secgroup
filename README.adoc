@@ -90,7 +90,7 @@ module "dynamic-secgroup" {
 }
 
 
-# Template file "terraform.tfvars.template"
+# Sample "terraform.tfvars"
 
 aws_account_id = "aws_account_id"
 aws_access_key = "aws_access_key"
