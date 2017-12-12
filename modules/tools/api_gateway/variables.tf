@@ -10,6 +10,4 @@ variable "path" {}
 variable "lambda_fn_name" {}
 variable "lambda_invoke_arn" {}
 
-variable "deployment_stage" {
-  default     = "dev"
-}
+variable "deployment_stage" {}

@@ -1,5 +1,6 @@
 locals {
-  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/*/${var.method}${var.path}"
+  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/${var.deployment_stage}/${var.method}${var.path}"
+//  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/*/${var.method}${var.path}"
 }
 
 resource "aws_api_gateway_method" "method" {
@@ -51,8 +52,11 @@ resource "aws_lambda_permission" "lambda_permission" {
 
 resource "aws_api_gateway_deployment" "deployment" {
   depends_on  = [
-    "aws_api_gateway_integration_response.integration_response",
-    "aws_lambda_permission.lambda_permission"
+    "aws_api_gateway_method.method",
+    "aws_api_gateway_integration.integration",
+    "aws_api_gateway_method_response.method_response",
+    "aws_lambda_permission.lambda_permission",
+    "aws_api_gateway_integration_response.integration_response"
   ]
 
   rest_api_id = "${var.rest_api_id}"

@@ -12,3 +12,4 @@ python.zip
 
 modules/tools/python/test/app/
 examples/getting-started/terraform.tfvars
+modules/python/
