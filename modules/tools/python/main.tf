@@ -1,6 +1,9 @@
+locals {
+  uuid = "${uuid()}"
+}
 resource "template_dir" "service_py" {
   source_dir      = "${path.module}/src"
-  destination_dir = "${path.module}/.src"
+  destination_dir = "${path.module}/.src/${local.uuid}"
 
   vars {
     type            = "${var.type}"
@@ -17,6 +20,6 @@ data "archive_file" "service_py" {
     "template_dir.service_py"
   ]
   type        = "zip"
-  output_path = "${path.module}/python.zip"
+  output_path = "${path.module}/.src/${local.uuid}.zip"
   source_dir  = "${template_dir.service_py.destination_dir}"
 }

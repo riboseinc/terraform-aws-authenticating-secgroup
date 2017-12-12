@@ -3,11 +3,11 @@ output "method" {
 }
 
 output "invoke_url" {
-  value = "${module.gateway.invoke_url}${var.gateway_http_path}"
+  value = "${module.gateway.invoke_url}"
 }
 
-output "execution_arn" {
-  value = "${module.gateway.execution_arn}${var.gateway_http_path}"
+output "execution_resource" {
+  value = "${module.gateway.execution_resource}"
 }
 
 output "lambda_name" {

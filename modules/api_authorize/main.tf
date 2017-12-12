@@ -25,6 +25,8 @@ module "lamda" {
 
 module "gateway" {
   source            = "../tools/api_gateway"
+  deployment_stage  = "${var.gateway_deployment_stage}"
+
   aws_account_id    = "${var.aws_account_id}"
   aws_region        = "${var.aws_region}"
   name_prefix       = "${var.name_prefix}"
