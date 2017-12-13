@@ -21,6 +21,6 @@ def handler(event=None, context=None):
         "body": json.dumps({
             "success": revoked,
             "code": "REVOKED" if revoked else "SOURCE_IP_NOT_FOUND",
-            "message": f"source_ip not found in groups {fail_groups}" if revoked else "source_ip revoked"
+            "message": f"source_ip not found in groups {fail_groups}" if not revoked else "source_ip revoked"
         })
     }
