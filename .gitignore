@@ -12,3 +12,5 @@ python.zip
 
 **/python/test/app/
 examples/getting-started/terraform.tfvars
+test_args.sh
+invoke_it.sh
