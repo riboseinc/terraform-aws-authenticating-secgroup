@@ -6,7 +6,6 @@ variable "description" {}
 
 module "dynamic-secgroup" {
   source                  = "../../../.."
-  deployment_stage        = "production"
 
   aws_account_id          = "${var.aws_account_id}"
   aws_region              = "us-west-2"
