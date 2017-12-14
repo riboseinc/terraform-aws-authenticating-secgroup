@@ -1,13 +1,20 @@
-output "execution_resources" {
+output "invoke_urls" {
   value = [
-    "${module.api_authorize.execution_resource}",
-    "${module.api_revoke.execution_resource}"
+    "${module.gateway_authorize.invoke_url}",
+    "${module.gateway_revoke.invoke_url}"
   ]
 }
 
-output "invoke_urls" {
+output "execution_resources" {
   value = [
-    "${module.api_authorize.invoke_url}",
-    "${module.api_revoke.invoke_url}"
+    "${module.gateway_authorize.execution_resource}",
+    "${module.gateway_revoke.execution_resource}"
+  ]
+}
+
+output "lambda_names" {
+  value = [
+    "${module.lamda_authorize.fn_name}",
+    "${module.lamda_revoke.fn_name}"
   ]
 }

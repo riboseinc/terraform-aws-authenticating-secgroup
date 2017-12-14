@@ -1,21 +1,45 @@
-//resource "aws_iam_policy" "access_policy" {
-//  //  name   = "access_policy"
-//  description = "terraform-aws-authenticating-secgroup"
-//  policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
-//}
-//
-//data "aws_iam_policy_document" "access_policy_doc" {
-////  policy_id = "ssh-access-policy"
-//
-//  statement {
-////    sid       = "AccessSecurityGroup"
-//    effect    = "Allow"
-//    actions   = [
-//      "execute-api:Invoke"
-//    ]
-//    resources = [
-//      //      "arn:aws:execute-api:${var.aws-region}:${var.aws-account-id}:${aws_api_gateway_rest_api.api.name}/*/DELETE/connection",
-//      //      "arn:aws:execute-api:${var.aws-region}:${var.aws-account-id}:${aws_api_gateway_rest_api.api.name}/*/POST/connection"
-//    ]
-//  }
-//}
+/** Lambda Role */
+data "aws_iam_policy_document" "lambda_policy" {
+  statement {
+    effect  = "Allow",
+    actions = [
+      "sts:AssumeRole",
+    ]
+
+    principals {
+      type        = "Service"
+      identifiers = [
+        "lambda.amazonaws.com"
+      ]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "ec2_policy" {
+  statement {
+    effect    = "Allow",
+    actions   = [
+      "ec2:DescribeSecurityGroups",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "ec2_role_policy" {
+  name_prefix = "${var.name_prefix}"
+  role        = "${aws_iam_role.lambda_sts_role.id}"
+  policy      = "${data.aws_iam_policy_document.ec2_policy.json}"
+}
+
+resource "aws_iam_role" "lambda_sts_role" {
+  name_prefix        = "${var.name_prefix}"
+  assume_role_policy = "${data.aws_iam_policy_document.lambda_policy.json}"
+}
