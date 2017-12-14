@@ -142,3 +142,6 @@ output "access-policy-arn" {
   value = "${aws_iam_policy.access_policy.arn}"
 }
 ```
+
+### Bash to execute the API
+Check out [aws-authenticating-secgroup-scripts](https://github.com/phuonghuynh/aws-authenticating-secgroup-scripts)

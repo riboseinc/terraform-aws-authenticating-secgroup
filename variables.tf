@@ -8,7 +8,7 @@ variable "aws_region" {
 
 variable "description" {
   description = "Description of this secgroup"
-  default = "Dynamically Managing Security Group IPs API"
+  default     = "Dynamically Managing Security Group IPs API"
 }
 
 variable "name_prefix" {
@@ -39,11 +39,12 @@ variable "secgroup_rule_to_port" {
 }
 
 variable "secgroup_rule_protocol" {
-  default = "tcp"
+  default     = "tcp"
+  description = "What kind of protocol to apply (e.g. tcp)"
 }
 
 variable "time_to_expire" {
   default     = 600
-  description = "ime to expiry for every rule."
+  description = "Time to expiry for every rule (in seconds)"
 }
 

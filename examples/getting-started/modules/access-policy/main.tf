@@ -5,7 +5,7 @@ variable "execution_resources" {
 variable "description" {}
 
 resource "aws_iam_policy" "this" {
-  name = "secgroup-access-policy"
+  name        = "secgroup-access-policy"
   description = "Policy: ${var.description}"
   policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
 }
