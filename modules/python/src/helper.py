@@ -13,10 +13,11 @@ class DynaSecGroups:
         if self.handle_type not in ['ingress', 'egress']:
             raise OperationNotFoundError(f"Not found handler for type {self.handle_type.upper()}")
 
-        cidr_ip = event['requestContext']['identity']['sourceIp'] + '/32'
-        security_groups = json.loads('${security_groups}')
+        self.source_ip = event['requestContext']['identity']['sourceIp']
+        cidr_ip = f'{self.source_ip}/32'
+        self.security_groups = json.loads('${security_groups}')
         rule = Rule(cidr_ip=cidr_ip)
-        self.sec_groups = [SecGroup(group_id=group_id, rule=rule) for group_id in security_groups]
+        self.sec_groups = [SecGroup(group_id=group_id, rule=rule) for group_id in self.security_groups]
 
     def __do_ingress_or_egress(self, ingress, egress):
         has_updated = True

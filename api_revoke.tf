@@ -2,6 +2,7 @@
 module "lamda_revoke" {
   source                = "modules/lambda"
   name                  = "${local.revoke_fn_name}"
+  description           = "Removes source_ip from security_groups ${jsonencode(var.security_groups)}"
   handler               = "${module.python.revoke_handler}"
   role_arn              = "${aws_iam_role.lambda_sts_role.arn}"
   zip_path              = "${module.python.path}"
@@ -19,8 +20,8 @@ module "gateway_revoke" {
   lambda_fn_name    = "${module.lamda_revoke.fn_name}"
   lambda_invoke_arn = "${module.lamda_revoke.invoke_arn}"
 
-  rest_api_id       = "${aws_api_gateway_rest_api.manage_secgroup_ips_api.id}"
-  resource_id       = "${aws_api_gateway_resource.manage_secgroup_ips_endpoint.id}"
-  path              = "${aws_api_gateway_resource.manage_secgroup_ips_endpoint.path}"
+  rest_api_id       = "${aws_api_gateway_rest_api.this.id}"
+  resource_id       = "${aws_api_gateway_resource.this.id}"
+  path              = "${aws_api_gateway_resource.this.path}"
   method            = "${local.revoke_http_method}"
 }

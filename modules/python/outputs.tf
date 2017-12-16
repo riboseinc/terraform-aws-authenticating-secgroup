@@ -1,5 +1,4 @@
 output "path" {
-  depends_on = [ "archive_file.service_py" ]
   value = "${data.archive_file.service_py.output_path}"
 }
 
@@ -13,4 +12,8 @@ output "authorize_handler" {
 
 output "revoke_handler" {
   value = "revoke.handler"
+}
+
+output "clear_handler" {
+  value = "clear.handler"
 }

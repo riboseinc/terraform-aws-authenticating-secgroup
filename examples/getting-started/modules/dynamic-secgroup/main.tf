@@ -30,8 +30,8 @@ module "dynamic-secgroup" {
   time_to_expire          = 600
 }
 
-output "dynamic-secgroup-api-invoke-urls" {
-  value = "${module.dynamic-secgroup.invoke_urls}"
+output "dynamic-secgroup-api-invoke-url" {
+  value = "${module.dynamic-secgroup.invoke_url}"
 }
 
 output "dynamic-secgroup-api-execution-resources" {

@@ -1,7 +1,7 @@
 locals {
   uuid = "${uuid()}"
 }
-resource "template_dir" "service_py" {
+resource "template_dir" "this" {
   source_dir      = "${path.module}/src"
   destination_dir = "${path.module}/.src/${local.uuid}"
 
@@ -17,9 +17,9 @@ resource "template_dir" "service_py" {
 
 data "archive_file" "service_py" {
   depends_on  = [
-    "template_dir.service_py"
+    "template_dir.this"
   ]
   type        = "zip"
   output_path = "${path.module}/.src/${local.uuid}.zip"
-  source_dir  = "${template_dir.service_py.destination_dir}"
+  source_dir  = "${template_dir.this.destination_dir}"
 }

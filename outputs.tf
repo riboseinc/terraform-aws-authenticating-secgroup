@@ -1,8 +1,5 @@
-output "invoke_urls" {
-  value = [
-    "${module.gateway_authorize.invoke_url}",
-    "${module.gateway_revoke.invoke_url}"
-  ]
+output "invoke_url" {
+  value = "${aws_api_gateway_deployment.this.invoke_url}${aws_api_gateway_resource.this.path}"
 }
 
 output "execution_resources" {

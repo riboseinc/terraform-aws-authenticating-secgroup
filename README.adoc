@@ -101,8 +101,8 @@ description  = "Developer SSH Access"
 
 # Some outputs
 
-output "dynamic-secgroup-api-invoke-urls" {
-  value = "${module.dynamic-secgroup.invoke_urls}"
+output "dynamic-secgroup-api-invoke-url" {
+  value = "${module.dynamic-secgroup.invoke_url}"
 }
 
 output "dynamic-secgroup-api-execution-resources" {
