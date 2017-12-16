@@ -1,4 +1,5 @@
-resource "aws_lambda_function" "lambda_function" {
+resource "aws_lambda_function" "this" {
+  description      = "${var.description}"
   role             = "${var.role_arn}"
   runtime          = "python3.6"
 

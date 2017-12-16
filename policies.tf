@@ -40,6 +40,7 @@ resource "aws_iam_role_policy" "ec2_role_policy" {
 }
 
 resource "aws_iam_role" "lambda_sts_role" {
-  name_prefix        = "${var.name_prefix}"
+  name_prefix        = "${var.name_prefix}-"
+  description        = "used by terraform-aws-authenticating-secgroup"
   assume_role_policy = "${data.aws_iam_policy_document.lambda_policy.json}"
 }

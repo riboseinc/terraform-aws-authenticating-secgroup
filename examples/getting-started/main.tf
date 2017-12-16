@@ -21,7 +21,7 @@ module "access-policy" {
 }
 
 output "dynamic-secgroup-api-invoke-url" {
-  value = "${module.dynamic-secgroup.dynamic-secgroup-api-invoke-urls}"
+  value = "${module.dynamic-secgroup.dynamic-secgroup-api-invoke-url}"
 }
 
 output "dynamic-secgroup-api-excutions" {

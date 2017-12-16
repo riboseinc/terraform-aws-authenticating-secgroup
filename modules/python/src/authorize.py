@@ -5,7 +5,8 @@ from botocore.model import OperationNotFoundError
 
 def handler(event=None, context=None):
     try:
-        has_created, _ = DynaSecGroups(event).authorize()
+        dyna_sec_groups = DynaSecGroups(event)
+        has_created, _ = dyna_sec_groups.authorize()
     except Exception as error:
         status_code = 500
         if isinstance(error, OperationNotFoundError):
@@ -23,6 +24,7 @@ def handler(event=None, context=None):
         "statusCode": 201 if has_created else 200,
         "body": json.dumps({
             "success": True,
-            "code": "CREATED" if has_created else "UPDATED"
+            "code": "CREATED" if has_created else "UPDATED",
+            "message": f"{dyna_sec_groups.source_ip} added to groups {dyna_sec_groups.security_groups}"
         })
     }
