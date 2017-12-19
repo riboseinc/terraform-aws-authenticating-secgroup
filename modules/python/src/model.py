@@ -19,7 +19,7 @@ class DynaSecGroups:
 
     def __init__(self, event=None):
         if handle_type not in ['ingress', 'egress']:
-            raise OperationNotFoundError(f"Not found handler for type {handle_type.upper()}")
+            raise helper.OperationNotSupportedError(f"Not found handler for type {handle_type.upper()}")
 
         self.security_groups = json.loads('${security_groups}')
 
@@ -140,4 +140,4 @@ class SecGroup:
         return status_code < 400
 
     def revoke_egress(self):
-        raise OperationNotFoundError(f"Revoke Egress IPs not supported atm")
+        raise helper.OperationNotSupportedError(f"Revoke Egress IPs not supported atm")

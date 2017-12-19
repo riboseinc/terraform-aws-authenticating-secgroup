@@ -9,5 +9,5 @@ def catch(*exceptions, **kwargs):
         pass
 
 
-class OperationNotFoundError(Exception):
+class OperationNotSupportedError(Exception):
     pass

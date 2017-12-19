@@ -9,7 +9,7 @@ def handler(event=None, context=None):
         has_created, _ = dyna_sec_groups.authorize()
     except Exception as error:
         status_code = 500
-        if isinstance(error, helper.OperationNotFoundError):
+        if isinstance(error, helper.OperationNotSupportedError):
             status_code = 404
 
         return {
