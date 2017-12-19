@@ -8,7 +8,7 @@ def handler(event=None, context=None):
         dyna_sec_groups = DynaSecGroups(event)
         revoked, fail_groups = dyna_sec_groups.revoke()
     except Exception as error:
-        status_code = 404 if isinstance(error, helper.OperationNotFoundError) else 500
+        status_code = 404 if isinstance(error, helper.OperationNotSupportedError) else 500
         return {
             "statusCode": status_code,
             "body": json.dumps({
