@@ -1,5 +1,3 @@
-import shutil
-import glob
 import os
 import sys
 
@@ -13,8 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + "/app")
 
 
 def init_params():
-    # helper.py
-    with open(f'{base}/helper.py', 'r') as file:
+    r_file = f'{base}/model.py'
+    with open(r_file, 'r') as file:
         file_data = file.read()
 
     file_data = file_data \
@@ -26,5 +24,5 @@ def init_params():
         .replace('${protocol}', 'tcp') \
         .replace('${time_to_expire}', '600')
 
-    with open(f'{base}/helper.py', 'w') as file:
+    with open(r_file, 'w') as file:
         file.write(file_data)

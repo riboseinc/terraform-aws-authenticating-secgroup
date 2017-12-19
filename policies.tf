@@ -34,7 +34,7 @@ data "aws_iam_policy_document" "ec2_policy" {
 }
 
 resource "aws_iam_role_policy" "ec2_role_policy" {
-  name_prefix = "${var.name_prefix}"
+  name_prefix = "${var.name_prefix}-"
   role        = "${aws_iam_role.lambda_sts_role.id}"
   policy      = "${data.aws_iam_policy_document.ec2_policy.json}"
 }

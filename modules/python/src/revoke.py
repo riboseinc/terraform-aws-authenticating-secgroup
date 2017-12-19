@@ -1,6 +1,6 @@
 import json
-from helper import DynaSecGroups
-from botocore.model import OperationNotFoundError
+from model import DynaSecGroups
+import helper
 
 
 def handler(event=None, context=None):
@@ -8,7 +8,7 @@ def handler(event=None, context=None):
         dyna_sec_groups = DynaSecGroups(event)
         revoked, fail_groups = dyna_sec_groups.revoke()
     except Exception as error:
-        status_code = 404 if isinstance(error, OperationNotFoundError) else 500
+        status_code = 404 if isinstance(error, helper.OperationNotFoundError) else 500
         return {
             "statusCode": status_code,
             "body": json.dumps({
@@ -17,11 +17,13 @@ def handler(event=None, context=None):
             })
         }
 
+    fail_message = f"{dyna_sec_groups.cidr_ip} not found in groups {fail_groups}"
+    success_message = f"{dyna_sec_groups.cidr_ip} revoked from groups {dyna_sec_groups.security_groups}"
     return {
         "statusCode": 200 if revoked else 404,
         "body": json.dumps({
             "success": revoked,
             "code": "REVOKED" if revoked else "SOURCE_IP_NOT_FOUND",
-            "message": f"{dyna_sec_groups.source_ip} not found in groups {fail_groups}" if not revoked else f"{dyna_sec_groups.source_ip} revoked from groups {dyna_sec_groups.security_groups}"
+            "message": fail_message if not revoked else success_message
         })
     }
