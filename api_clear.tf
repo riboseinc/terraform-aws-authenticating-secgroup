@@ -24,5 +24,13 @@ resource "aws_cloudwatch_event_target" "clear" {
   target_id = "${module.lamda_clear.id}"
   rule      = "${aws_cloudwatch_event_rule.clear.name}"
   arn       = "${module.lamda_clear.arn}"
-  input     = "{${jsonencode("security_groups")}: ${jsonencode(var.security_groups)}}" //"${data.template_file.clear_input.rendered}"
+//  input     = "{${jsonencode("security_groups")}: ${jsonencode(var.security_groups)}, ${jsonencode("type")}: ${jsonencode(var.secgroup_rule_type)}"
+}
+
+resource "aws_lambda_permission" "clear" {
+  function_name = "${module.lamda_clear.fn_name}"
+  statement_id = "AllowExecutionFromCloudWatch"
+  action = "lambda:InvokeFunction"
+  principal = "events.amazonaws.com"
+  source_arn = "${aws_cloudwatch_event_rule.clear.arn}"
 }

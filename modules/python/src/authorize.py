@@ -1,6 +1,6 @@
 import json
-from helper import DynaSecGroups
-from botocore.model import OperationNotFoundError
+from model import DynaSecGroups
+import helper
 
 
 def handler(event=None, context=None):
@@ -9,7 +9,7 @@ def handler(event=None, context=None):
         has_created, _ = dyna_sec_groups.authorize()
     except Exception as error:
         status_code = 500
-        if isinstance(error, OperationNotFoundError):
+        if isinstance(error, helper.OperationNotFoundError):
             status_code = 404
 
         return {
@@ -25,6 +25,6 @@ def handler(event=None, context=None):
         "body": json.dumps({
             "success": True,
             "code": "CREATED" if has_created else "UPDATED",
-            "message": f"{dyna_sec_groups.source_ip} added to groups {dyna_sec_groups.security_groups}"
+            "message": f"{dyna_sec_groups.cidr_ip} added to groups {dyna_sec_groups.security_groups}"
         })
     }
