@@ -1,6 +1,7 @@
 locals {
   uuid = "${uuid()}"
 }
+
 resource "template_dir" "this" {
   source_dir      = "${path.module}/src"
   destination_dir = "${path.module}/.src/${local.uuid}"

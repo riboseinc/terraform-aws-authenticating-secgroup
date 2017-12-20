@@ -2,7 +2,7 @@
 module "lamda_revoke" {
   source                = "modules/lambda"
   name                  = "${local.revoke_fn_name}"
-  description           = "Removes source_ip from security_groups ${jsonencode(var.security_groups)}"
+  description           = "Removes source_ip from ${var.secgroup_rule_type} security_groups"
   handler               = "${module.python.revoke_handler}"
   role_arn              = "${aws_iam_role.lambda_sts_role.arn}"
   zip_path              = "${module.python.path}"

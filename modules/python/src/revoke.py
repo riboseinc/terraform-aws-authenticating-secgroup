@@ -13,6 +13,7 @@ def handler(event=None, context=None):
             "statusCode": status_code,
             "body": json.dumps({
                 "success": False,
+                "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
                 "error": {"message": str(error), "type": error.__class__.__name__, "args": error.args}
             })
         }
@@ -24,6 +25,7 @@ def handler(event=None, context=None):
         "body": json.dumps({
             "success": revoked,
             "code": "REVOKED" if revoked else "SOURCE_IP_NOT_FOUND",
+            "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
             "message": fail_message if not revoked else success_message
         })
     }

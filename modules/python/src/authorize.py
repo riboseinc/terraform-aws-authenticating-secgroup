@@ -16,6 +16,7 @@ def handler(event=None, context=None):
             "statusCode": status_code,
             "body": json.dumps({
                 "success": False,
+                "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
                 "error": {"message": str(error), "type": error.__class__.__name__, "args": error.args}
             })
         }
@@ -25,6 +26,7 @@ def handler(event=None, context=None):
         "body": json.dumps({
             "success": True,
             "code": "CREATED" if has_created else "UPDATED",
+            "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
             "message": f"{dyna_sec_groups.cidr_ip} added to groups {dyna_sec_groups.security_groups}"
         })
     }

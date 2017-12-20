@@ -8,7 +8,7 @@ if __name__ == "__main__":
 
     init_params()
 
-    from app.revoke import handler
+    from app.clear import handler
 
     result = handler()
     print(result)
