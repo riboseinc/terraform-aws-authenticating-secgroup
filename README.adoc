@@ -66,6 +66,10 @@ Steps:
 ----
 module "dynamic-secgroup" {
   source = "riboseinc/authenticating-secgroup/aws"
+
+  # prefix string used in named resources
+  name_prefix             = "getting-started-"
+
   aws_account_id          = "${var.aws_account_id}"
   aws_region              = "us-west-2"
 

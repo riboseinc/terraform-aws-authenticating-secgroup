@@ -1,15 +1,17 @@
 locals {
-  authorize_fn_name     = "authorize-security-group-${var.secgroup_rule_type}"
+  authorize_fn_name     = "${var.name_prefix}authorize-secgroups"
   authorize_http_method = "POST"
 
-  revoke_fn_name        = "revoke-security-group-${var.secgroup_rule_type}"
+  revoke_fn_name        = "${var.name_prefix}revoke-secgroups"
   revoke_http_method    = "DELETE"
 
-  clear_fn_name         = "clear-security-group-${var.secgroup_rule_type}"
+  clear_fn_name         = "${var.name_prefix}clear-secgroups"
+  clear_event_rule_name = "${var.name_prefix}clear-expired-ip"
+  clear_event_rate      = "rate(1 minute)"
 }
 
 resource "aws_api_gateway_rest_api" "this" {
-  name        = "terraform-aws-authenticating-secgroup"
+  name        = "${var.name_prefix}terraform-aws-authenticating-secgroup"
   description = "${var.description}"
 }
 

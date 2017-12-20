@@ -12,7 +12,6 @@ variable "description" {
 }
 
 variable "name_prefix" {
-  default = "dyna-secgroup"
   description = "Creates a unique name beginning with the specified prefix, useful for searching later"
 }
 

@@ -10,5 +10,5 @@ python.zip
 .src/
 .terraform.*
 
-modules/tools/python/test/app/
+**/python/test/app/
 examples/getting-started/terraform.tfvars
