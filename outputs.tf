@@ -1,5 +1,6 @@
 output "invoke_url" {
-  value = "${aws_api_gateway_deployment.this.invoke_url}${aws_api_gateway_resource.this.path}"
+  value      = "${aws_api_gateway_deployment.this.invoke_url}${aws_api_gateway_resource.this.path}"
+  description = "API Rest invoke URL"
 }
 
 output "execution_resources" {
@@ -7,6 +8,7 @@ output "execution_resources" {
     "${module.gateway_authorize.execution_resource}",
     "${module.gateway_revoke.execution_resource}"
   ]
+  description = "Excution resouces arn"
 }
 
 output "lambda_names" {
@@ -15,10 +17,12 @@ output "lambda_names" {
     "${module.lamda_revoke.fn_name}",
     "${module.lamda_clear.fn_name}"
   ]
+  description = "Lambda function names"
 }
 
 output "events" {
   value = [
     "${aws_cloudwatch_event_rule.clear.arn}"
   ]
+  description = "Event arns"
 }

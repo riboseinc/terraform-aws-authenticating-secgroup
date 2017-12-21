@@ -9,7 +9,6 @@ module "lamda_clear" {
   zip_path_base64sha256 = "${module.python.path_base64sha256}"
 }
 
-
 resource "aws_cloudwatch_event_rule" "clear" {
   depends_on          = [
     "module.lamda_clear"
