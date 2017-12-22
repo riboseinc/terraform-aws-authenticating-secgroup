@@ -27,16 +27,16 @@ Return **403** if not authorized.
 2. Once authenticated, Find out the source IP address (a host "/32").
 
 3. If the request is a `POST /connection`
-  - The function will add a `authorize-security-group-ingress` rule for this
-    source IP address, with a description that indicates the "time" that this rule was added.  
-    Return **201**.
-  - If the source IP address is already in the security-group,
-    update the description using `update-security-group-rule-descriptions-ingress` to reflect the latest time.  
-    Return **200**
+    - The function will add a `authorize-security-group-ingress` rule for this
+      source IP address, with a description that indicates the "time" that this rule was added.  
+      Return **201**.
+    - If the source IP address is already in the security-group,
+      update the description using `update-security-group-rule-descriptions-ingress` to reflect the latest time.  
+      Return **200**
 
 4. If the request is a `DELETE /connection`
-  - If the source IP address is in the security-group, issue a `revoke-security-group-ingress` on it. Return **200**.
-  - If the source IP address is not in the security group, do nothing. Return **404**.
+    - If the source IP address is in the security-group, issue a `revoke-security-group-ingress` on it. Return **200**.
+    - If the source IP address is not in the security group, do nothing. Return **404**.
 
 3. Done.
 
@@ -53,10 +53,10 @@ Steps:
 1. The function will describe all rules in the given security group.
 
 2. For every rule, it will check the description for the time of last update.
-  - If the elapsed time is less than the configured X seconds, don't do anything.
-  - If the elapsed time is more than the configured X seconds, it means that the
-    rule has expired, and it should execute `revoke-security-group-ingress` on it.
-    (e.g., if all rules are expired, the security group should now contain no rules)
+    - If the elapsed time is less than the configured X seconds, don't do anything.
+    - If the elapsed time is more than the configured X seconds, it means that the
+      rule has expired, and it should execute `revoke-security-group-ingress` on it.
+      (e.g., if all rules are expired, the security group should now contain no rules)
 
 3. Done.
 
