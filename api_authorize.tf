@@ -4,7 +4,7 @@ module "lamda_authorize" {
   name                  = "${local.authorize_fn_name}"
   description           = "Adds source_ip to ${var.secgroup_rule_type} security_groups"
   handler               = "${module.python.authorize_handler}"
-  role_arn              = "${aws_iam_role.lambda_sts_role.arn}"
+  role_arn              = "${module.sts_lambda.arn}"
   zip_path              = "${module.python.path}"
   zip_path_base64sha256 = "${module.python.path_base64sha256}"
 }

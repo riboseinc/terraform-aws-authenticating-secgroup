@@ -1,46 +1,33 @@
-/** Lambda Role */
-data "aws_iam_policy_document" "lambda_policy" {
-  statement {
-    effect  = "Allow",
-    actions = [
-      "sts:AssumeRole",
-    ]
+module "sts_lambda" {
+  source = "modules/sts_assume_role"
 
-    principals {
-      type        = "Service"
-      identifiers = [
-        "lambda.amazonaws.com"
-      ]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "ec2_policy" {
-  statement {
-    effect    = "Allow",
-    actions   = [
-      "ec2:DescribeSecurityGroups",
-      "ec2:RevokeSecurityGroupIngress",
-      "ec2:AuthorizeSecurityGroupEgress",
-      "ec2:AuthorizeSecurityGroupIngress",
-      "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
-      "ec2:RevokeSecurityGroupEgress",
-      "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-}
-
-resource "aws_iam_role_policy" "ec2_role_policy" {
+  service_identifier = "lambda.amazonaws.com"
   name_prefix = "${var.name_prefix}"
-  role        = "${aws_iam_role.lambda_sts_role.id}"
-  policy      = "${data.aws_iam_policy_document.ec2_policy.json}"
+  actions = [
+    "ec2:DescribeSecurityGroups",
+    "ec2:RevokeSecurityGroupIngress",
+    "ec2:AuthorizeSecurityGroupEgress",
+    "ec2:AuthorizeSecurityGroupIngress",
+    "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+    "ec2:RevokeSecurityGroupEgress",
+    "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+  ]
+  description = "used by Lambda invoke Ec2 Security Group"
 }
 
-resource "aws_iam_role" "lambda_sts_role" {
-  name_prefix        = "${var.name_prefix}"
-  description        = "used by terraform-aws-authenticating-secgroup"
-  assume_role_policy = "${data.aws_iam_policy_document.lambda_policy.json}"
+module "sts_gateway" {
+  source = "modules/sts_assume_role"
+
+  service_identifier = "apigateway.amazonaws.com"
+  name_prefix = "${var.name_prefix}"
+  actions = [
+    "logs:CreateLogGroup",
+    "logs:CreateLogStream",
+    "logs:DescribeLogGroups",
+    "logs:DescribeLogStreams",
+    "logs:PutLogEvents",
+    "logs:GetLogEvents",
+    "logs:FilterLogEvents"
+  ]
+  description = "used by Api Gateway to write log (cloudwatch)"
 }
