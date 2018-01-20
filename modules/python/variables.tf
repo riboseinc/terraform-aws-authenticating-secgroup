@@ -1,7 +1,7 @@
 variable "type" {}
 
 variable "security_groups" {
-  type = "list"
+  type    = "list"
   default = []
 }
 

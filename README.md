@@ -144,4 +144,4 @@ output "access-policy-arn" {
 ```
 
 ### Bash to execute the API
-Check out [aws-authenticating-secgroup-scripts](https://github.com/phuonghuynh/aws-authenticating-secgroup-scripts)
+Check out [aws-authenticating-secgroup-scripts](https://github.com/riboseinc/aws-authenticating-secgroup-scripts)
