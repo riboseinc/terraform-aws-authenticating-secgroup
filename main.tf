@@ -35,15 +35,24 @@ resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = "${module.sts_gateway.arn}"
 }
 
+resource "aws_cloudwatch_log_group" "this" {
+  depends_on = ["aws_api_gateway_rest_api.this"]
+  name       = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.this.id}/${var.deployment_stage}"
+}
+
 resource "aws_api_gateway_method_settings" "this" {
-  depends_on  = ["aws_api_gateway_deployment.this", "aws_api_gateway_account.this"]
+  depends_on  = [
+    "aws_api_gateway_deployment.this",
+    "aws_api_gateway_account.this"
+  ]
+
   rest_api_id = "${aws_api_gateway_rest_api.this.id}"
   stage_name  = "${var.deployment_stage}"
   method_path = "*/*"
 
   settings {
-    metrics_enabled = true
-    logging_level = "INFO"
+    metrics_enabled    = true
+    logging_level      = "INFO"
     data_trace_enabled = true
   }
 }
@@ -58,6 +67,5 @@ module "python" {
   protocol        = "${var.secgroup_rule_protocol}"
   time_to_expire  = "${var.time_to_expire}"
 }
-
 
 /**** check out "api_*.tf" ****/

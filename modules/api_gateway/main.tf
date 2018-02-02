@@ -1,6 +1,5 @@
 locals {
   execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/${var.deployment_stage}/${var.method}${var.path}"
-  //  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/*/${var.method}${var.path}"
 }
 
 resource "aws_api_gateway_method" "this" {
