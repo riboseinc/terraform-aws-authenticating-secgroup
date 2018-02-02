@@ -6,7 +6,7 @@ import helper
 def handler(event=None, context=None):
     try:
         dyna_sec_groups = DynaSecGroups(event)
-        has_created, _ = dyna_sec_groups.authorize()
+        created, _ = dyna_sec_groups.authorize()
     except Exception as error:
         status_code = 500
         if isinstance(error, helper.OperationNotSupportedError):
@@ -17,16 +17,18 @@ def handler(event=None, context=None):
             "body": json.dumps({
                 "success": False,
                 "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
+                "security_groups": dyna_sec_groups.security_groups,
                 "error": {"message": str(error), "type": error.__class__.__name__, "args": error.args}
             })
         }
 
     return {
-        "statusCode": 201 if has_created else 200,
+        "statusCode": 201 if created else 200,
         "body": json.dumps({
             "success": True,
-            "code": "CREATED" if has_created else "UPDATED",
+            "code": "CREATED" if created else "UPDATED",
             "cidr_ip": f"{dyna_sec_groups.cidr_ip}",
-            "message": f"{dyna_sec_groups.cidr_ip} added to groups {dyna_sec_groups.security_groups}"
+            "security_groups": dyna_sec_groups.security_groups,
+            "message": f"{dyna_sec_groups.cidr_ip} added"
         })
     }
