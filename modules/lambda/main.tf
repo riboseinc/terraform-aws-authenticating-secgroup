@@ -8,4 +8,8 @@ resource "aws_lambda_function" "this" {
 
   function_name    = "${var.name}"
   handler          = "${var.handler}"
+
+  lifecycle {
+    ignore_changes = ["source_code_hash"]
+  }
 }
