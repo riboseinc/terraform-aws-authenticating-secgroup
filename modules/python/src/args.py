@@ -12,13 +12,13 @@ class Arguments:
         self.__security_groups = None
         self.__time_to_expire = None
 
-    @property
-    def region_names(self):
-        return self.__region_names
-
-    @region_names.setter
-    def region_names(self, names):
-        self.__region_names = names if not names else [None]
+    # @property
+    # def region_names(self):
+    #     return self.__region_names
+    #
+    # @region_names.setter
+    # def region_names(self, names):
+    #     self.__region_names = names if not names else [None]
 
     @property
     def event(self):
@@ -48,13 +48,19 @@ class Arguments:
         security_groups = {}
         for group in groups:
             for group_id in group['group_ids']:
-                security_groups[group_id] = security_groups.get(group_id, []) + group['rules']
+                security_group = security_groups.get(group_id, {})
+                rules = security_group.get('rules', []) + group['rules']
+                security_groups[group_id] = {
+                    'rules': rules,
+                    'region_name': group['region_name']
+                }
         return security_groups
 
     @property
     def time_to_expire(self):
         if self.__time_to_expire is None:
-            with helper.get_catch(default=0): self.__time_to_expire = int("${time_to_expire}")
+            with helper.catch(fn=lambda: int("${time_to_expire}"), default=0) as value:
+                self.__time_to_expire = value
         return self.__time_to_expire
 
     @time_to_expire.setter
@@ -63,5 +69,3 @@ class Arguments:
 
 
 arguments = Arguments()
-
-

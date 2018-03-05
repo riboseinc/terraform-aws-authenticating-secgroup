@@ -5,11 +5,15 @@ import model
 
 
 @contextmanager
-def get_catch(**kwargs):
+def catch(fn, pass_error=True, **kwargs):
+    yield get_catch(fn=fn, pass_error=pass_error, **kwargs)
+
+
+def get_catch(fn, pass_error=True, **kwargs):
     try:
-        yield kwargs.get("default", None)
-    except Exception as ex:
-        pass
+        return fn()
+    except Exception as error:
+        return kwargs.get('default', None) if pass_error else error
 
 
 def handler(fn_handler, event):
