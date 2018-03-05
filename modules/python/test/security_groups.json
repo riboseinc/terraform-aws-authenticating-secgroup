@@ -1,0 +1,29 @@
+[
+  {
+    "group_ids": [
+      "sg-df7a88a3",
+      "sg-c9c72eb5"
+    ],
+    "rules": [
+      {
+        "type": "ingress",
+        "from_port": 22,
+        "to_port": 22,
+        "protocol": "tcp"
+      }
+    ]
+  },
+  {
+    "group_ids": [
+      "sg-c9c72eb5"
+    ],
+    "rules": [
+      {
+        "type": "ingress",
+        "from_port": 24,
+        "to_port": 24,
+        "protocol": "tcp"
+      }
+    ]
+  }
+]

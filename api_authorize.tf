@@ -2,7 +2,8 @@
 module "lamda_authorize" {
   source                = "modules/lambda"
   name                  = "${local.authorize_fn_name}"
-  description           = "Adds source_ip to ${var.secgroup_rule_type} security_groups"
+  description           = "Adds source_ip to security_groups"
+//  description           = "Adds source_ip to ${var.secgroup_rule_type} security_groups"
   handler               = "${module.python.authorize_handler}"
   role_arn              = "${module.sts_lambda.arn}"
   zip_path              = "${module.python.path}"
@@ -13,9 +14,10 @@ module "gateway_authorize" {
   source            = "modules/api_gateway"
   deployment_stage  = "${var.deployment_stage}"
 
-  aws_account_id    = "${var.aws_account_id}"
-  aws_region        = "${var.aws_region}"
-  name_prefix       = "${var.name_prefix}"
+  //  aws_account_id    = "${var.aws_account_id}"
+  //  aws_region        = "${var.aws_region}"
+  //  name_prefix       = "${var.name_prefix}"
+//  name              = "${var.name}"
 
   lambda_fn_name    = "${module.lamda_authorize.fn_name}"
   lambda_invoke_arn = "${module.lamda_authorize.invoke_arn}"

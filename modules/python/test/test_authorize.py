@@ -1,14 +1,6 @@
 from helper_test import *
-import glob
-import shutil
+import os
 
-if __name__ == "__main__":
-    for filename in glob.glob(os.path.join('../src', '*.*')):
-        shutil.copy(filename, base)
+from src import authorize
 
-    init_params()
-
-    from app.authorize import handler
-
-    result = handler()
-    print(result)
+print(authorize.handler(event=event))

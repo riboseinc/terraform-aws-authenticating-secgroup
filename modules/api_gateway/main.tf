@@ -1,6 +1,14 @@
 locals {
-  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/${var.deployment_stage}/${var.method}${var.path}"
+  execute_api_arn = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:${var.rest_api_id}/${var.deployment_stage}/${var.method}${var.path}"
+//  execute_api_arn = "arn:aws:execute-api:${var.aws_region}:${var.aws_account_id}:${var.rest_api_id}/${var.deployment_stage}/${var.method}${var.path}"
 }
+
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+//output "account_id" {
+//  value = "${data.aws_caller_identity.current.account_id}"
+//}
 
 resource "aws_api_gateway_method" "this" {
   rest_api_id   = "${var.rest_api_id}"
