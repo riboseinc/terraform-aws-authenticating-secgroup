@@ -1,12 +1,12 @@
+import time
+from datetime import datetime, timedelta
+
 import boto3
 from botocore.exceptions import ClientError
-from datetime import datetime, timedelta
-import time
-import json
-import helper
 from dateutil import parser
-from abc import ABC, abstractmethod
+
 import args
+import helper
 
 expired_at = 'expired at {}'
 
@@ -135,9 +135,27 @@ class SecGroup:
 
         return ok_rules, failure_rules
 
-    def revoke(self):
-        rules = list(filter(lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)), self.aws_rules))
-        return self.__send_to_aws(fn_send_ingress=lambda awargs: self.aws_group.revoke_ingress(**awargs), rules=rules)
+    def revoke(self, revoke_rules=None):
+        if not revoke_rules:
+            revoke_rules = list(filter(lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)), self.aws_rules))
+        return self.__send_to_aws(fn_send_ingress=lambda awargs: self.aws_group.revoke_ingress(**awargs), rules=revoke_rules)
+
+    def clear(self):
+        now = datetime.now()
+        aws_rules = list(filter(
+            lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)),
+            self.aws_rules
+        ))
+
+        desc_prefix = expired_at.format("")
+        revoke_rules = []
+        for aws_rule in aws_rules:
+            desc = aws_rule.description
+            if not desc: continue
+            expired_time = parser.parse(desc[desc.startswith(desc_prefix) and len(desc_prefix):])
+            if expired_time is not None and now >= expired_time.timestamp(): revoke_rules.append(aws_rule)
+
+        return self.revoke(revoke_rules) if revoke_rules else None
 
 
 class SecGroupRule(dict):

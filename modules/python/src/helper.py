@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-import json
+
 import args
 import model
 
@@ -20,6 +20,7 @@ def handler(fn_handler, event):
     args.arguments.event = event
     response = {
         "statusCode": 200,
+        "action": event.action,
         "body": {
             "success": True,
             "cidr_ip": f"{args.arguments.cidr_ip}"
