@@ -6,9 +6,19 @@ class Arguments:
 
     def __init__(self):
         self.cidr_ip = self.source_ip = None
+
+        self.__region_names = [None]
         self.__event = None
         self.__security_groups = None
         self.__time_to_expire = None
+
+    @property
+    def region_names(self):
+        return self.__region_names
+
+    @region_names.setter
+    def region_names(self, names):
+        self.__region_names = names if not names else [None]
 
     @property
     def event(self):
@@ -50,15 +60,6 @@ class Arguments:
     @time_to_expire.setter
     def time_to_expire(self, seconds):
         self.__time_to_expire = seconds
-
-    # def __getattr__(self, name):
-    #     try:
-    #         return getattr(self, name)
-    #     except KeyError as e:
-    #         raise AttributeError(e)
-
-    # def dyna_sec_groups(self, event):
-    #     return DynaSecGroups(event=event, security_groups=self.security_groups)
 
 
 arguments = Arguments()

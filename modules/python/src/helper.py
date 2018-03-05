@@ -13,32 +13,31 @@ def get_catch(**kwargs):
 
 
 def handler(fn_handler, event):
+    args.arguments.event = event
+    response = {
+        "statusCode": 200,
+        "body": {
+            "success": True,
+            "cidr_ip": f"{args.arguments.cidr_ip}"
+        }
+    }
+
     try:
-        # dyna_sec_groups = Arguments.get().dyna_sec_groups(event)
-        args.arguments.event = event
         failed_groups = fn_handler(model.DynaSecGroups())
+        if failed_groups:
+            response['body']['failed_groups'] = failed_groups
+            response['statusCode'] = 206  # partial groups succeed
     except Exception as error:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({
-                "success": False,
-                "cidr_ip": f"{args.arguments.cidr_ip}",
-                "error": {
-                    "message": str(error),
-                    "type": error.__class__.__name__,
-                    "args": error.args
-                }
-            })
+        response['statusCode'] = 500
+        response['body']['success'] = False
+        response['body']['error'] = {
+            "message": str(error),
+            "type": error.__class__.__name__,
+            "args": error.args
         }
 
-    return {
-        "statusCode": 201 if not failed_groups else 200,
-        "body": json.dumps({
-            "success": True,
-            "cidr_ip": f"{args.arguments.cidr_ip}",
-            "failed_groups": failed_groups
-        })
-    }
+    return response
+
 
 class OperationNotSupportedError(Exception):
     pass
@@ -46,5 +45,3 @@ class OperationNotSupportedError(Exception):
 
 class NPE(Exception):
     pass
-
-

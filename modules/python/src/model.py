@@ -14,22 +14,19 @@ expired_at = 'expired at {}'
 class DynaSecGroups:
 
     def __init__(self):  # proxy event
-        # try:
-        #     self.source_ip = event['requestContext']['identity']['sourceIp']
-        #     self.cidr_ip = f'{self.source_ip}/32'
-        # except KeyError as error:
-        #     print(f"Ignore error {str(error)}")
         security_groups = args.arguments.security_groups
-        self.sec_groups = [
-            SecGroup(group_id=group_id, rules=security_groups[group_id]) #cidr_ip=getattr(self, 'cidr_ip'),
-            for group_id in security_groups.keys()
-        ]
+        self.sec_groups = []
+        for region_name in args.arguments.region_names:
+            self.sec_groups += [
+                SecGroup(group_id=group_id, rules=security_groups[group_id], region_name=region_name)
+                for group_id in security_groups.keys()
+            ]
 
     def __process(self, fn_process):
         fail_groups = {}
         for sec_group in self.sec_groups:
             failed_rules = fn_process(sec_group)
-            if not failed_rules:
+            if failed_rules:
                 fail_groups[sec_group.aws_group.group_id] = failed_rules
         return fail_groups
 
@@ -42,9 +39,9 @@ class DynaSecGroups:
 
 class SecGroup:
 
-    def __init__(self, group_id, rules): #, cidr_ip=None, time_to_expire=0):
+    def __init__(self, group_id, rules, region_name=None):
         # ec2 = boto3.resource('ec2')
-        ec2 = boto3.resource('ec2', region_name='us-west-2') #TODO setup region here
+        ec2 = boto3.resource('ec2', region_name=region_name)  # 'us-west-2') #TODO setup region here
         group = ec2.SecurityGroup(group_id)
         group.load()
 
@@ -96,7 +93,7 @@ class SecGroup:
                 }]
             }
 
-    def authorize(self):  # TODO support egress also?
+    def authorize(self):
         now = datetime.now()
         expire = now + timedelta(0, self.time_to_expire)
 
