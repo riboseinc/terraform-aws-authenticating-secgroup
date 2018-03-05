@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 
 import args
-import model
 
 
 @contextmanager
@@ -16,11 +15,11 @@ def get_catch(fn, pass_error=True, **kwargs):
         return kwargs.get('default', None) if pass_error else error
 
 
-def handler(fn_handler, event):
+def handler(fn_handler, action, event):
     args.arguments.event = event
     response = {
         "statusCode": 200,
-        "action": event.action,
+        "action": action,
         "body": {
             "success": True,
             "cidr_ip": f"{args.arguments.cidr_ip}"
@@ -28,7 +27,11 @@ def handler(fn_handler, event):
     }
 
     try:
-        failed_groups = fn_handler(model.DynaSecGroups())
+        import model
+        succeed_groups, failed_groups = fn_handler(model.DynaSecGroups())
+        if succeed_groups:
+            response['body']['succeed_groups'] = succeed_groups
+
         if failed_groups:
             response['body']['failed_groups'] = failed_groups
             response['statusCode'] = 206  # partial groups succeed
@@ -42,6 +45,24 @@ def handler(fn_handler, event):
         }
 
     return response
+
+
+def return_if(**kwargs):
+    def wrap(func):
+        def wrapped_func(obj, *func_args, **func_kwargs):
+            has_attribute = kwargs.get('has_attribute', None)
+            if has_attribute and hasattr(obj, has_attribute):
+                return_attribute = kwargs.get('return_attribute', None)
+                if return_attribute and hasattr(obj, return_attribute):
+                    result = getattr(obj, return_attribute)
+                else:
+                    result = getattr(obj, has_attribute)
+                return result
+
+            return func(obj, *func_args, **func_kwargs)
+
+        return wrapped_func
+    return wrap
 
 
 class OperationNotSupportedError(Exception):

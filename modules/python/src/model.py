@@ -22,17 +22,21 @@ class DynaSecGroups:
         ) for group_id in security_groups.keys()]
 
     def __process(self, fn_process):
-        failure_groups = {}
+        ok_groups, failure_groups = {}, {}
         for sec_group in self.sec_groups:
-            _, failure_rules = fn_process(sec_group)
-            if failure_rules: failure_groups[sec_group.group_id] = failure_rules
-        return failure_groups
+            ok, failure = fn_process(sec_group)
+            if ok: ok_groups[sec_group.group_id] = ok
+            if failure: failure_groups[sec_group.group_id] = failure
+        return ok_groups, failure_groups
 
     def authorize(self):
         return self.__process(lambda sg: sg.authorize())
 
     def revoke(self):
         return self.__process(lambda sg: sg.revoke())
+
+    def clear(self):
+        return self.__process(lambda sg: sg.clear())
 
 
 class SecGroup:
@@ -42,7 +46,7 @@ class SecGroup:
         self.time_to_expire = args.arguments.time_to_expire
         self.rules = [SecGroupRule(rule) for rule in rules]
         self.group_id = group_id
-        self.__init_error = None
+        # self.__init_error = None
 
         try:
             ec2 = boto3.resource('ec2', region_name=region_name)  # 'us-west-2') #TODO setup region here
@@ -68,7 +72,7 @@ class SecGroup:
             self.aws_client = self.aws_group.meta.client
             self.aws_region_name = self.aws_client.meta.region_name
         except Exception as error:
-            self.__init_error = error
+            self.error_loading = error
 
     def __get_awargs_generator(self, **kwargs):
         expire = kwargs.get('expire', None)
@@ -95,6 +99,7 @@ class SecGroup:
                 }]
             }
 
+    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
     def authorize(self):
         now = datetime.now()
         expire = now + timedelta(0, self.time_to_expire)
@@ -109,10 +114,11 @@ class SecGroup:
             expire=expire
         )
 
-    def __send_to_aws(self, fn_send_ingress, fn_duplicate_ingress=None, **kwargs):
-        if self.__init_error:
-            return [], [{'error': str(self.__init_error), 'rules': self.rules}]
+    @property
+    def error_loading__send_to_aws(self):
+        return [], [{'error': str(self.error_loading), 'rules': self.rules}]
 
+    def __send_to_aws(self, fn_send_ingress, fn_duplicate_ingress=None, **kwargs):
         ok_rules = []
         failure_rules = []
         awargs_generator = self.__get_awargs_generator(**kwargs)
@@ -131,31 +137,43 @@ class SecGroup:
                         fn=lambda: fn_duplicate_ingress(awargs) if rule.is_ingress() else None
                     )
 
-            failure_rules.append({'error': str(response), 'rules': [rule]}) if isinstance(response, Exception) else ok_rules.append(rule)
+            if isinstance(response, Exception):
+                failure_rules.append({'error': str(response), 'rules': [rule]})
+            else:
+                ok_rules.append(rule)
 
         return ok_rules, failure_rules
 
+    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
     def revoke(self, revoke_rules=None):
         if not revoke_rules:
-            revoke_rules = list(filter(lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)), self.aws_rules))
-        return self.__send_to_aws(fn_send_ingress=lambda awargs: self.aws_group.revoke_ingress(**awargs), rules=revoke_rules)
+            revoke_rules = list(filter(
+                lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)),
+                self.aws_rules
+            ))
+        return self.__send_to_aws(
+            fn_send_ingress=lambda awargs: self.aws_group.revoke_ingress(**awargs),
+            rules=revoke_rules
+        )
 
+    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
     def clear(self):
-        now = datetime.now()
+        now, desc_prefix = datetime.now(), expired_at.format("")
         aws_rules = list(filter(
-            lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)),
+            lambda aws_rule: next(filter(
+                lambda rule: aws_rule.get('description', '').startswith(desc_prefix) and rule == aws_rule,
+                self.rules
+            )),
             self.aws_rules
         ))
 
-        desc_prefix = expired_at.format("")
         revoke_rules = []
         for aws_rule in aws_rules:
             desc = aws_rule.description
-            if not desc: continue
             expired_time = parser.parse(desc[desc.startswith(desc_prefix) and len(desc_prefix):])
-            if expired_time is not None and now >= expired_time.timestamp(): revoke_rules.append(aws_rule)
+            if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
 
-        return self.revoke(revoke_rules) if revoke_rules else None
+        return self.revoke(revoke_rules) if revoke_rules else None, None
 
 
 class SecGroupRule(dict):
