@@ -1,13 +1,14 @@
 locals {
-  authorize_fn_name     = "${var.name}-authorize-secgroups"
+  suffix = "${substr(timestamp(), 0, 10)}"
+  authorize_fn_name     = "authorize-secgroups-${local.suffix}"
   authorize_http_method = "POST"
 
-//  revoke_fn_name        = "${var.name_prefix}revoke-secgroups"
-//  revoke_http_method    = "DELETE"
-//
-//  clear_fn_name         = "${var.name_prefix}clear-secgroups"
-//  clear_event_rule_name = "${var.name_prefix}clear-expired-ip"
-//  clear_event_rate      = "rate(1 minute)"
+  revoke_fn_name        = "revoke-secgroups-${local.suffix}"
+  revoke_http_method    = "DELETE"
+
+  clear_fn_name         = "clear-secgroups-${local.suffix}"
+  clear_event_rule_name = "clear-expired-ip-${local.suffix}"
+  clear_event_rate      = "rate(1 minute)"
 
 }
 

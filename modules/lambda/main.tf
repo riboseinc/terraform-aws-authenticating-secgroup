@@ -9,7 +9,11 @@ resource "aws_lambda_function" "this" {
   function_name    = "${var.name}"
   handler          = "${var.handler}"
 
+  timeout          = "300" # ~5mins
+
   lifecycle {
-    ignore_changes = ["source_code_hash"]
+    ignore_changes = [
+      "source_code_hash"
+    ]
   }
 }

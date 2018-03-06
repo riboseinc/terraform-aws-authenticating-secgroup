@@ -28,7 +28,8 @@ class Arguments:
     @property
     def security_groups(self):
         if self.__security_groups is None:
-            self.__security_groups = json.loads('''${security_groups}''')
+            self.security_groups = json.loads('''${security_groups}''')
+            # self.__security_groups = self.normalize_groups(json.loads('''${security_groups}'''))
         return self.__security_groups
 
     @security_groups.setter

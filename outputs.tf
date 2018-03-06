@@ -10,19 +10,19 @@ output "execution_resources" {
   ]
   description = "Excution resouces arn"
 }
-//
-//output "lambda_names" {
-//  value       = [
-//    "${module.lamda_authorize.fn_name}",
-//    "${module.lamda_revoke.fn_name}",
-//    "${module.lamda_clear.fn_name}"
-//  ]
-//  description = "Lambda function names"
-//}
-//
-//output "events" {
-//  value       = [
-//    "${aws_cloudwatch_event_rule.clear.arn}"
-//  ]
-//  description = "Event arns"
-//}
+
+output "lambda_names" {
+  value       = [
+    "${module.lamda_authorize.fn_name}",
+    "${module.lamda_revoke.fn_name}",
+    "${module.lamda_clear.fn_name}"
+  ]
+  description = "Lambda function names"
+}
+
+output "events" {
+  value       = [
+    "${aws_cloudwatch_event_rule.clear.arn}"
+  ]
+  description = "Event arns"
+}

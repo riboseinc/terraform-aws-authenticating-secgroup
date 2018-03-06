@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 
 import args
+import json
 
 
 @contextmanager
@@ -19,8 +20,8 @@ def handler(fn_handler, action, event):
     args.arguments.event = event
     response = {
         "statusCode": 200,
-        "action": action,
         "body": {
+            "action": action,
             "success": True,
             "cidr_ip": f"{args.arguments.cidr_ip}"
         }
@@ -44,24 +45,22 @@ def handler(fn_handler, action, event):
             "args": error.args
         }
 
+    response['body'] = json.dumps(response['body'])
     return response
 
 
 def return_if(**kwargs):
     def wrap(func):
         def wrapped_func(obj, *func_args, **func_kwargs):
-            has_attribute = kwargs.get('has_attribute', None)
-            if has_attribute and hasattr(obj, has_attribute):
-                return_attribute = kwargs.get('return_attribute', None)
-                if return_attribute and hasattr(obj, return_attribute):
-                    result = getattr(obj, return_attribute)
-                else:
-                    result = getattr(obj, has_attribute)
-                return result
-
+            has_attr = kwargs.get('has_attr', None)
+            if has_attr and hasattr(obj, has_attr):
+                return_attr = kwargs.get('return_attr', None)
+                if return_attr and hasattr(obj, return_attr): return getattr(obj, return_attr)
+                return getattr(obj, has_attr)
             return func(obj, *func_args, **func_kwargs)
 
         return wrapped_func
+
     return wrap
 
 

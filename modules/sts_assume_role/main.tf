@@ -32,7 +32,7 @@ resource "aws_iam_role_policy" "this" {
 }
 
 resource "aws_iam_role" "this" {
-  //name_prefix        = "${var.name_prefix}"
+//  name_prefix        = "${var.name_prefix}"
   name = "${var.name}"
   description        = "${var.description}"
   assume_role_policy = "${data.aws_iam_policy_document.sts.json}"

@@ -2,7 +2,8 @@
 module "lamda_authorize" {
   source                = "modules/lambda"
   name                  = "${local.authorize_fn_name}"
-  description           = "Adds source_ip to security_groups"
+  description = "${var.description}"
+//  description           = "Add source_ip"
 //  description           = "Adds source_ip to ${var.secgroup_rule_type} security_groups"
   handler               = "${module.python.authorize_handler}"
   role_arn              = "${module.sts_lambda.arn}"

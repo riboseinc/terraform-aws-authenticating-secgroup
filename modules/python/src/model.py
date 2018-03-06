@@ -46,7 +46,6 @@ class SecGroup:
         self.time_to_expire = args.arguments.time_to_expire
         self.rules = [SecGroupRule(rule) for rule in rules]
         self.group_id = group_id
-        # self.__init_error = None
 
         try:
             ec2 = boto3.resource('ec2', region_name=region_name)  # 'us-west-2') #TODO setup region here
@@ -93,13 +92,13 @@ class SecGroup:
                 'GroupId': self.group_id,
                 'IpPermissions': [{
                     'IpRanges': ip_ranges,
-                    'FromPort': rule.from_port,
-                    'ToPort': rule.to_port,
+                    'FromPort': int(rule.from_port),
+                    'ToPort': int(rule.to_port),
                     'IpProtocol': rule.protocol
                 }]
             }
 
-    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
+    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
     def authorize(self):
         now = datetime.now()
         expire = now + timedelta(0, self.time_to_expire)
@@ -130,8 +129,7 @@ class SecGroup:
             )
 
             if isinstance(response, ClientError):
-                error_code = response.response['Error']['Code']
-                if error_code == 'InvalidPermission.Duplicate':
+                if response.response['Error']['Code'] == 'InvalidPermission.Duplicate':
                     response = helper.get_catch(
                         pass_error=False,
                         fn=lambda: fn_duplicate_ingress(awargs) if rule.is_ingress() else None
@@ -144,7 +142,7 @@ class SecGroup:
 
         return ok_rules, failure_rules
 
-    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
+    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
     def revoke(self, revoke_rules=None):
         if not revoke_rules:
             revoke_rules = list(filter(
@@ -156,7 +154,7 @@ class SecGroup:
             rules=revoke_rules
         )
 
-    @helper.return_if(has_attribute='error_loading', return_attribute='error_loading__send_to_aws')
+    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
     def clear(self):
         now, desc_prefix = datetime.now(), expired_at.format("")
         aws_rules = list(filter(
