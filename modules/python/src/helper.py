@@ -6,14 +6,15 @@ import json
 
 @contextmanager
 def catch(fn, pass_error=True, **kwargs):
-    yield get_catch(fn=fn, pass_error=pass_error, **kwargs)
+    yield get_catch(fn=fn, ignore_error=pass_error, **kwargs)
 
 
-def get_catch(fn, pass_error=True, **kwargs):
+def get_catch(fn, ignore_error=True, ignore_result=False, **kwargs):
     try:
-        return fn()
+        result = fn(**kwargs)
+        return None if ignore_result else result
     except Exception as error:
-        return kwargs.get('default', None) if pass_error else error
+        return kwargs.get('default', None) if ignore_error else error
 
 
 def handler(fn_handler, action, event):
@@ -29,9 +30,9 @@ def handler(fn_handler, action, event):
 
     try:
         import model
-        succeed_groups, failed_groups = fn_handler(model.DynaSecGroups())
-        if succeed_groups:
-            response['body']['succeed_groups'] = succeed_groups
+        failed_groups = fn_handler(model.DynaSecGroups())
+        # if succeed_groups:
+        #     response['body']['succeed_groups'] = succeed_groups
 
         if failed_groups:
             response['body']['failed_groups'] = failed_groups
@@ -57,7 +58,14 @@ def return_if(**kwargs):
                 return_attr = kwargs.get('return_attr', None)
                 if return_attr and hasattr(obj, return_attr): return getattr(obj, return_attr)
                 return getattr(obj, has_attr)
-            return func(obj, *func_args, **func_kwargs)
+
+            error_handler = kwargs.get('error_handler', None)
+            try:
+                return func(obj, *func_args, **func_kwargs)
+            except Exception as error:
+                if error_handler and hasattr(obj, error_handler):
+                    return getattr(obj, error_handler)(error, *func_args, **func_kwargs)
+                else: raise error
 
         return wrapped_func
 

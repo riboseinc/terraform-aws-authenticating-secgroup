@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import boto3
 from botocore.exceptions import ClientError
 from dateutil import parser
+import json
 
 import args
 import helper
@@ -22,12 +23,13 @@ class DynaSecGroups:
         ) for group_id in security_groups.keys()]
 
     def __process(self, fn_process):
-        ok_groups, failure_groups = {}, {}
+        failure_groups = {}
         for sec_group in self.sec_groups:
-            ok, failure = fn_process(sec_group)
-            if ok: ok_groups[sec_group.group_id] = ok
-            if failure: failure_groups[sec_group.group_id] = failure
-        return ok_groups, failure_groups
+            # failure_rules = fn_process(sec_group)
+            failure_rules = helper.get_catch(fn=lambda: fn_process(sec_group), ignore_error=False)
+            if failure_rules:
+                failure_groups[sec_group.group_id] = failure_groups.get(sec_group.group_id, []) + failure_rules
+        return failure_groups
 
     def authorize(self):
         return self.__process(lambda sg: sg.authorize())
@@ -46,34 +48,58 @@ class SecGroup:
         self.time_to_expire = args.arguments.time_to_expire
         self.rules = [SecGroupRule(rule) for rule in rules]
         self.group_id = group_id
+        self.region_name = region_name
 
-        try:
-            ec2 = boto3.resource('ec2', region_name=region_name)  # 'us-west-2') #TODO setup region here
-            group = ec2.SecurityGroup(group_id)
-            group.load()
+        error = helper.get_catch(lambda: self.__init_aws(), ignore_error=False)
+        if error: self.error_init_aws = error
 
-            self.aws_group = group
-            self.aws_rules = []
+    def __init_aws(self):
+        ec2 = boto3.resource('ec2', region_name=self.region_name)
+        group = ec2.SecurityGroup(self.group_id)
+        self.aws_group = group
+        self.aws_client = self.aws_group.meta.client
+        self.aws_region_name = self.aws_client.meta.region_name
 
-            permissions = list(filter(
-                lambda p: next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges'])),
-                self.aws_group.ip_permissions
+    def process_error(self, error, *args, **kwargs):
+        return [self.__to_failure_error(errors=error, rules=self.rules)]
+
+    @property
+    def aws_rules(self):
+        self.aws_group.load()
+        permissions = list(filter(
+            lambda p: next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges'])),
+            self.aws_group.ip_permissions
+        ))
+
+        aws_rules = []
+        for p in permissions:
+            aws_rules.append(SecGroupRule(
+                type='ingress',  # TODO support type 'egress' also
+                from_port=p['FromPort'],
+                to_port=p['ToPort'],
+                protocol=p['IpProtocol'],
+                description=next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges']))['Description']
             ))
-            for p in permissions:
-                self.aws_rules.append(SecGroupRule(
-                    type='ingress',
-                    from_port=p['FromPort'],
-                    to_port=p['ToPort'],
-                    protocol=p['IpProtocol'],
-                    description=next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges']))['Description']
-                ))
+        return aws_rules
 
-            self.aws_client = self.aws_group.meta.client
-            self.aws_region_name = self.aws_client.meta.region_name
-        except Exception as error:
-            self.error_loading = error
+    @staticmethod
+    def __to_failure_error(errors, rules):
+        if not isinstance(errors, (list, tuple)): errors = [errors]
+        if not isinstance(rules, (list, tuple)): rules = [rules]
+        return {
+            'errors': list(map(lambda er: str(er), errors)),
+            'rules': list(map(lambda r: str(r), rules))
+        }
 
-    def __get_awargs_generator(self, **kwargs):
+    @property
+    def existing_ingress_rules(self):
+        return list(filter(lambda r: next(filter(lambda ar: r.is_ingress() and r == ar, self.aws_rules)), self.rules))
+
+    @property
+    def ingress_rules(self):
+        return list(filter(lambda r: r.is_ingress(), self.rules))
+
+    def __get_aws_ip_permissions(self, **kwargs):  # aws ip permissions generator
         expire = kwargs.get('expire', None)
 
         ip_ranges = kwargs.get('ip_ranges', [])
@@ -87,91 +113,87 @@ class SecGroup:
             )
 
         rules = kwargs.get('rules', self.rules)
-        for rule in rules:
-            yield rule, {
-                'GroupId': self.group_id,
-                'IpPermissions': [{
-                    'IpRanges': ip_ranges,
-                    'FromPort': int(rule.from_port),
-                    'ToPort': int(rule.to_port),
-                    'IpProtocol': rule.protocol
-                }]
-            }
+        ip_permissions = [{
+            'IpRanges': ip_ranges,
+            'FromPort': int(rule.from_port),
+            'ToPort': int(rule.to_port),
+            'IpProtocol': rule.protocol
+        } for rule in rules]
 
-    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
+        return {'GroupId': self.group_id, 'IpPermissions': ip_permissions} if ip_permissions else None
+
+    @helper.return_if(has_attr='error_init_aws', error_handler='process_error')
     def authorize(self):
         now = datetime.now()
         expire = now + timedelta(0, self.time_to_expire)
-
-        return self.__send_to_aws(
-            fn_send_ingress=lambda awargs: (
-                self.aws_group.authorize_ingress(**awargs)
-            ),
-            fn_duplicate_ingress=lambda awargs: (
-                self.aws_client.update_security_group_rule_descriptions_ingress(**awargs)
-            ),
-            expire=expire
+        return self.__retry(
+            fn_retries=[
+                lambda _, ips: self.aws_group.authorize_ingress(**ips),
+                lambda _, ips: self.aws_client.update_security_group_rule_descriptions_ingress(**ips)
+            ],
+            expire=expire,
+            rules=self.ingress_rules
         )
 
-    @property
-    def error_loading__send_to_aws(self):
-        return [], [{'error': str(self.error_loading), 'rules': self.rules}]
+    def __retry(self, fn_retries=(), **kwargs):
+        last_error, ips = None, self.__get_aws_ip_permissions(**kwargs)
 
-    def __send_to_aws(self, fn_send_ingress, fn_duplicate_ingress=None, **kwargs):
-        ok_rules = []
-        failure_rules = []
-        awargs_generator = self.__get_awargs_generator(**kwargs)
+        for fn_retry in fn_retries:
+            last_error = helper.get_catch(
+                fn=lambda: fn_retry(last_error, ips),
+                ignore_error=False,
+                ignore_result=True
+            ) if ips else None
+            if not last_error: break
 
-        for rule, awargs in awargs_generator:
-            response = helper.get_catch(
-                pass_error=False,
-                fn=lambda: fn_send_ingress(awargs) if rule.is_ingress() else None
-            )
+        if not last_error: return None
+        rules, retry_once = kwargs.get('rules', []), kwargs.get('retry_once', True)
+        if not retry_once: return self.__to_failure_error(errors=last_error, rules=rules)
 
-            if isinstance(response, ClientError):
-                if response.response['Error']['Code'] == 'InvalidPermission.Duplicate':
-                    response = helper.get_catch(
-                        pass_error=False,
-                        fn=lambda: fn_duplicate_ingress(awargs) if rule.is_ingress() else None
-                    )
+        last_error, failure_rules = None, []
+        for rule in rules:  # retry one by one rule
+            ips = self.__get_aws_ip_permissions(rules=[rule])
+            if not ips: continue
 
-            if isinstance(response, Exception):
-                failure_rules.append({'error': str(response), 'rules': [rule]})
-            else:
-                ok_rules.append(rule)
+            for fn_retry in fn_retries:
+                last_error = helper.get_catch(
+                    fn=lambda: fn_retry(last_error, ips),
+                    ignore_error=False,
+                    ignore_result=True
+                )
+                if not last_error: break
+            if last_error: failure_rules.append(self.__to_failure_error(errors=last_error, rules=rule))
+        return failure_rules
 
-        return ok_rules, failure_rules
-
-    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
+    @helper.return_if(has_attr='error_init_aws')
     def revoke(self, revoke_rules=None):
-        if not revoke_rules:
-            revoke_rules = list(filter(
-                lambda aws_rule: next(filter(lambda rule: rule == aws_rule, self.rules)),
-                self.aws_rules
-            ))
-        return self.__send_to_aws(
-            fn_send_ingress=lambda awargs: self.aws_group.revoke_ingress(**awargs),
-            rules=revoke_rules
+        return self.__retry(
+            fn_retries=[
+                lambda _, ips: self.aws_group.revoke_ingress(**ips),
+                lambda _, ips: self.aws_group.revoke_ingress(**ips)
+            ],
+            rules=revoke_rules if not revoke_rules else self.ingress_rules
         )
 
-    @helper.return_if(has_attr='error_loading', return_attr='error_loading__send_to_aws')
+    @helper.return_if(has_attr='error_init_aws')
     def clear(self):
-        now, desc_prefix = datetime.now(), expired_at.format("")
-        aws_rules = list(filter(
-            lambda aws_rule: next(filter(
-                lambda rule: aws_rule.get('description', '').startswith(desc_prefix) and rule == aws_rule,
-                self.rules
-            )),
-            self.aws_rules
-        ))
-
-        revoke_rules = []
-        for aws_rule in aws_rules:
-            desc = aws_rule.description
-            expired_time = parser.parse(desc[desc.startswith(desc_prefix) and len(desc_prefix):])
-            if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
-
-        return self.revoke(revoke_rules) if revoke_rules else None, None
+        pass
+        # now, desc_prefix = datetime.now(), expired_at.format("")
+        # aws_rules = list(filter(
+        #     lambda aws_rule: next(filter(
+        #         lambda rule: aws_rule.get('description', '').startswith(desc_prefix) and rule == aws_rule,
+        #         self.rules
+        #     )),
+        #     self.aws_rules
+        # ))
+        #
+        # revoke_rules = []
+        # for aws_rule in aws_rules:
+        #     desc = aws_rule.description
+        #     expired_time = parser.parse(desc[desc.startswith(desc_prefix) and len(desc_prefix):])
+        #     if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
+        #
+        # return self.revoke(revoke_rules=revoke_rules) if revoke_rules else None, None
 
 
 class SecGroupRule(dict):
@@ -192,6 +214,12 @@ class SecGroupRule(dict):
                     return False
             return True
         return False
+
+    def __hash__(self):
+        return str(self).__hash__()
+
+    def __str__(self):
+        return json.dumps(self)
 
     def is_ingress(self):
         return self.type == 'ingress'
