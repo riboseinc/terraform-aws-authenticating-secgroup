@@ -1,8 +1,3 @@
-//variable "aws_account_id" {}
-//variable "aws_region" {}
-//variable "name_prefix" {}
-//variable "name" {}
-
 variable "rest_api_id" {}
 variable "resource_id" {}
 variable "method" {}

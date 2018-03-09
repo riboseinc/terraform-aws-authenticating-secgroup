@@ -2,7 +2,6 @@ module "sts_lambda" {
   source = "modules/sts_assume_role"
 
   service_identifier = "lambda.amazonaws.com"
-//  name_prefix = "${var.name_prefix}"
   name = "${var.name}-lambda"
   actions = [
     "ec2:DescribeSecurityGroups",
@@ -20,7 +19,6 @@ module "sts_gateway" {
   source = "modules/sts_assume_role"
 
   service_identifier = "apigateway.amazonaws.com"
-  //name_prefix = "${var.name_prefix}"
   name = "${var.name}-gateway"
   actions = [
     "logs:CreateLogGroup",

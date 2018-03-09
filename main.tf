@@ -26,7 +26,6 @@ resource "aws_api_gateway_resource" "this" {
 resource "aws_api_gateway_deployment" "this" {
   depends_on  = [
     "module.gateway_authorize",
-//    "module.gateway_clear_api", //TODO test
     "module.gateway_revoke"
   ]
 
