@@ -1,5 +1,5 @@
 locals {
-  suffix = "${substr(timestamp(), 0, 10)}"
+  suffix = "${substr(uuid(), 24, 12)}"//da365446bb4c
   authorize_fn_name     = "authorize-secgroups-${local.suffix}"
   authorize_http_method = "POST"
 
@@ -26,7 +26,8 @@ resource "aws_api_gateway_resource" "this" {
 resource "aws_api_gateway_deployment" "this" {
   depends_on  = [
     "module.gateway_authorize",
-//    "module.gateway_revoke"
+//    "module.gateway_clear_api", //TODO test
+    "module.gateway_revoke"
   ]
 
   rest_api_id = "${aws_api_gateway_rest_api.this.id}"
@@ -61,12 +62,7 @@ resource "aws_api_gateway_method_settings" "this" {
 
 module "python" {
   source          = "modules/python"
-
-//  type            = "${var.secgroup_rule_type}"
   security_groups = "${var.security_groups}"
-//  from_port       = "${var.secgroup_rule_from_port}"
-//  to_port         = "${var.secgroup_rule_to_port}"
-//  protocol        = "${var.secgroup_rule_protocol}"
   time_to_expire  = "${var.time_to_expire}"
 }
 

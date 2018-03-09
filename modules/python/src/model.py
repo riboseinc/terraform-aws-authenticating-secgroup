@@ -9,7 +9,7 @@ import json
 import args
 import helper
 
-expired_at = 'expired at {}'
+ip_ranges_desc_prefix = 'expired at '
 
 
 class DynaSecGroups:
@@ -66,8 +66,14 @@ class SecGroup:
     @property
     def aws_rules(self):
         self.aws_group.load()
+
+        def by_rule(p_rule):
+            if self.cidr_ip:
+                return p_rule['CidrIp'] == self.cidr_ip
+            return p_rule.get('Description', '').startswith(ip_ranges_desc_prefix)
+
         permissions = list(filter(
-            lambda p: next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges'])),
+            lambda p: next(filter(lambda r: by_rule(r), p['IpRanges'])),
             self.aws_group.ip_permissions
         ))
 
@@ -75,10 +81,11 @@ class SecGroup:
         for p in permissions:
             aws_rules.append(SecGroupRule(
                 type='ingress',  # TODO support type 'egress' also
-                from_port=p['FromPort'],
-                to_port=p['ToPort'],
+                from_port=int(p['FromPort']),
+                to_port=int(p['ToPort']),
                 protocol=p['IpProtocol'],
-                description=next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges']))['Description']
+                ip_ranges=list(filter(lambda r: by_rule(r), p['IpRanges'])), #p['IpRanges'],
+                # description=next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges']))['Description']
             ))
         return aws_rules
 
@@ -108,13 +115,13 @@ class SecGroup:
                 {'CidrIp': self.cidr_ip} if expire is None
                 else {
                     'CidrIp': self.cidr_ip,
-                    'Description': expired_at.format(f'{expire.isoformat()}{time.strftime("%z")}')
+                    'Description': ip_ranges_desc_prefix + f'{expire.isoformat()}{time.strftime("%z")}'
                 }
             )
 
         rules = kwargs.get('rules', self.rules)
         ip_permissions = [{
-            'IpRanges': ip_ranges,
+            'IpRanges': ip_ranges if ip_ranges else rule.ip_ranges,
             'FromPort': int(rule.from_port),
             'ToPort': int(rule.to_port),
             'IpProtocol': rule.protocol
@@ -125,7 +132,7 @@ class SecGroup:
     @helper.return_if(has_attr='error_init_aws', error_handler='process_error')
     def authorize(self):
         now = datetime.now()
-        expire = now + timedelta(0, self.time_to_expire)
+        expire = now + timedelta(days=0, seconds=self.time_to_expire)
         return self.__retry(
             fn_retries=[
                 lambda _, ips: self.aws_group.authorize_ingress(**ips),
@@ -172,28 +179,33 @@ class SecGroup:
                 lambda _, ips: self.aws_group.revoke_ingress(**ips),
                 lambda _, ips: self.aws_group.revoke_ingress(**ips)
             ],
-            rules=revoke_rules if not revoke_rules else self.ingress_rules
+            rules=revoke_rules if revoke_rules else self.ingress_rules
         )
 
     @helper.return_if(has_attr='error_init_aws')
     def clear(self):
-        pass
-        # now, desc_prefix = datetime.now(), expired_at.format("")
+        now = datetime.now()
         # aws_rules = list(filter(
-        #     lambda aws_rule: next(filter(
-        #         lambda rule: aws_rule.get('description', '').startswith(desc_prefix) and rule == aws_rule,
+        #     lambda ar: next(filter(
+        #         lambda r: ar.get('description', '').startswith(ip_ranges_desc_prefix) and r == ar,
         #         self.rules
         #     )),
         #     self.aws_rules
         # ))
-        #
-        # revoke_rules = []
-        # for aws_rule in aws_rules:
-        #     desc = aws_rule.description
-        #     expired_time = parser.parse(desc[desc.startswith(desc_prefix) and len(desc_prefix):])
-        #     if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
-        #
-        # return self.revoke(revoke_rules=revoke_rules) if revoke_rules else None, None
+
+        revoke_rules = []
+        for aws_rule in self.aws_rules:
+            # desc = aws_rule.description
+            # expired_time = parser.parse(desc[desc.startswith(ip_ranges_desc_prefix) and len(ip_ranges_desc_prefix):])
+            ip_ranges = []
+            for ip in aws_rule.ip_ranges:
+                desc = ip.get('Description', '')
+                expired_time = parser.parse(
+                    desc[desc.startswith(ip_ranges_desc_prefix) and len(ip_ranges_desc_prefix):]
+                ) if not desc else now
+                if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
+
+        return self.revoke(revoke_rules=revoke_rules) if revoke_rules else None
 
 
 class SecGroupRule(dict):
@@ -210,8 +222,11 @@ class SecGroupRule(dict):
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             for p in ['type', 'from_port', 'to_port', 'protocol']:
-                if getattr(self, p) != getattr(other, p):
-                    return False
+                # vp = getattr(self, p)
+                vp = int(getattr(self, p)) if p.endswith('port') else getattr(self, p)
+                op = int(getattr(other, p)) if p.endswith('port') else getattr(other, p)
+                # op = getattr(other, p)
+                if vp != op: return False
             return True
         return False
 

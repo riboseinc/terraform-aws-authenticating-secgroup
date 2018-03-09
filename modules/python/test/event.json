@@ -5,7 +5,7 @@
 
     "requestContext": {
         "identity": {
-            "sourceIp": "192.168.10.123"
+            "sourceIp": "171.249.234.216"
         }
     }
 }

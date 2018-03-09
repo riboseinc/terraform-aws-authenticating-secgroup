@@ -22,7 +22,7 @@ class Arguments:
             self.__event = event
             self.source_ip = event['requestContext']['identity']['sourceIp']
             self.cidr_ip = f'{self.source_ip}/32'
-        except KeyError as error:
+        except Exception as error:
             print(f"Ignore error {str(error)}")
 
     @property
@@ -52,13 +52,12 @@ class Arguments:
     @property
     def time_to_expire(self):
         if self.__time_to_expire is None:
-            with helper.catch(fn=lambda: int("${time_to_expire}"), default=0) as value:
-                self.__time_to_expire = value
+            self.__time_to_expire = helper.get_catch(fn=lambda: int("${time_to_expire}"), default=600)
         return self.__time_to_expire
 
     @time_to_expire.setter
     def time_to_expire(self, seconds):
-        self.__time_to_expire = seconds
+        self.__time_to_expire = int(seconds)
 
 
 arguments = Arguments()

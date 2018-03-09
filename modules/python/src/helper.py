@@ -1,20 +1,13 @@
-from contextlib import contextmanager
-
 import args
 import json
 
 
-@contextmanager
-def catch(fn, pass_error=True, **kwargs):
-    yield get_catch(fn=fn, ignore_error=pass_error, **kwargs)
-
-
-def get_catch(fn, ignore_error=True, ignore_result=False, **kwargs):
+def get_catch(fn, ignore_error=True, ignore_result=False, default=None, **kwargs):
     try:
         result = fn(**kwargs)
         return None if ignore_result else result
     except Exception as error:
-        return kwargs.get('default', None) if ignore_error else error
+        return default if ignore_error else error
 
 
 def handler(fn_handler, action, event):
