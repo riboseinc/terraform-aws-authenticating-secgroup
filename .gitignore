@@ -18,3 +18,5 @@ invoke_it.sh
 .archive.zip
 .python.zip
 .python/
+api_clear_api.tf
+terraform.tfvars

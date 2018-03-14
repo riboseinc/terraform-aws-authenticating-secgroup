@@ -3,11 +3,7 @@ resource "template_dir" "this" {
   destination_dir = "${path.module}/.archive"
 
   vars {
-    type            = "${var.type}"
     security_groups = "${jsonencode(var.security_groups)}"
-    from_port       = "${var.from_port}"
-    to_port         = "${var.to_port}"
-    protocol        = "${var.protocol}"
     time_to_expire  = "${var.time_to_expire}"
   }
 }

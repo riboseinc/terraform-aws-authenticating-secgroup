@@ -1,191 +1,243 @@
+import time
+from datetime import datetime, timedelta
+
 import boto3
 from botocore.exceptions import ClientError
-from datetime import datetime, timedelta
-import time
-import json
-import helper
 from dateutil import parser
-from abc import ABC, abstractmethod
+import json
 
-# args passed by module "terraform-aws-authenticating-secgroup"
-handle_type = "${type}"
-protocol = "${protocol}"
+import args
+import helper
 
-with helper.catch(ValueError): from_port = int("${from_port}")
-with helper.catch(ValueError): to_port = int("${to_port}")
-with helper.catch(ValueError): time_to_expire = int("${time_to_expire}")
-
-expired_at = 'expired at {}'
+ip_ranges_desc_prefix = 'expired at '
 
 
 class DynaSecGroups:
 
-    def __init__(self, event=None):
-        if handle_type not in ['ingress', 'egress']:
-            raise helper.OperationNotSupportedError(f"Not found handler for type {handle_type.upper()}")
+    def __init__(self):  # proxy event
+        security_groups = args.arguments.security_groups
+        self.sec_groups = [SecGroup(
+            group_id=group_id,
+            rules=security_groups[group_id]['rules'],
+            region_name=security_groups[group_id]['region_name']
+        ) for group_id in security_groups.keys()]
 
-        self.security_groups = json.loads('${security_groups}')
-
-        cidr_ip = None
-
-        try:
-            self.source_ip = event['requestContext']['identity']['sourceIp']
-
-            cidr_ip = f'{self.source_ip}/32'
-            self.cidr_ip = f'{self.source_ip}/32'
-        except KeyError as error:
-            print(f"Ignore error {str(error)}")
-
-        self.sec_groups = [SecGroup(group_id=group_id, cidr_ip=cidr_ip) for group_id in self.security_groups]
-
-    def __do_ingress_or_egress(self, ingress, egress):
-        success = True  # empty group is OK because nothing tobe done
-        fail_groups = []
+    def __process(self, fn_process):
+        failure_groups = {}
         for sec_group in self.sec_groups:
-            success = ingress(sec_group) if handle_type == 'ingress' else egress(sec_group)
-            if not success:
-                fail_groups.append(sec_group.group.group_id)
-        return success, fail_groups
+            # failure_rules = fn_process(sec_group)
+            failure_rules = helper.get_catch(fn=lambda: fn_process(sec_group), ignore_error=False)
+            if failure_rules:
+                failure_groups[sec_group.group_id] = failure_groups.get(sec_group.group_id, []) + failure_rules
+        return failure_groups
 
     def authorize(self):
-        return self.__do_ingress_or_egress(
-            lambda sg: sg.authorize_ingress(),
-            lambda sg: sg.authorize_egress()
-        )
+        return self.__process(lambda sg: sg.authorize())
 
     def revoke(self):
-        return self.__do_ingress_or_egress(
-            lambda sg: sg.revoke_ingress(),
-            lambda sg: sg.revoke_egress()
-        )
+        return self.__process(lambda sg: sg.revoke())
 
     def clear(self):
-        return self.__do_ingress_or_egress(
-            lambda sg: sg.clear_expired_ips_ingress(),
-            lambda sg: sg.clear_expired_ips_egress()
-        )
+        return self.__process(lambda sg: sg.clear())
 
 
 class SecGroup:
 
-    def __init__(self, group_id, cidr_ip=None):
-        ec2 = boto3.resource('ec2')
-        group = ec2.SecurityGroup(group_id)
-        group.load()
+    def __init__(self, group_id, rules, region_name=None):
+        self.cidr_ip = args.arguments.cidr_ip
+        self.time_to_expire = args.arguments.time_to_expire
+        self.rules = [SecGroupRule(rule) for rule in rules]
+        self.group_id = group_id
+        self.region_name = region_name
 
-        self.cidr_ip = cidr_ip
-        self.group = group
-        self.client = self.group.meta.client
+        error = helper.get_catch(lambda: self.__init_aws(), ignore_error=False)
+        if error: self.error_init_aws = error
 
-    def __populate_ip_permissions_args(self, **kwargs):
-        # expire = None, ip_ranges = None
-        expire = kwargs.get('expire', None)
-        ip_ranges = kwargs.get('ip_ranges', [])
+    def __init_aws(self):
+        ec2 = boto3.resource('ec2', region_name=self.region_name)
+        group = ec2.SecurityGroup(self.group_id)
+        self.aws_group = group
+        self.aws_client = self.aws_group.meta.client
+        self.aws_region_name = self.aws_client.meta.region_name
 
-        args = {
-            "GroupId": self.group.group_id,
-            "IpPermissions": [{
-                'FromPort': from_port,
-                'ToPort': to_port,
-                'IpProtocol': protocol
-            }]
+    def process_error(self, error, *args, **kwargs):
+        return [self.__to_failure_error(errors=error, rules=self.rules)]
+
+    @property
+    def aws_rules(self):
+        self.aws_group.load()
+
+        def by_rule(p_rule):
+            if self.cidr_ip:
+                return p_rule['CidrIp'] == self.cidr_ip
+            return p_rule.get('Description', '').startswith(ip_ranges_desc_prefix)
+
+        permissions = list(filter(
+            lambda p: next(filter(lambda r: by_rule(r), p['IpRanges'])),
+            self.aws_group.ip_permissions
+        ))
+
+        aws_rules = []
+        for p in permissions:
+            aws_rules.append(SecGroupRule(
+                type='ingress',  # TODO support type 'egress' also
+                from_port=int(p['FromPort']),
+                to_port=int(p['ToPort']),
+                protocol=p['IpProtocol'],
+                ip_ranges=list(filter(lambda r: by_rule(r), p['IpRanges'])), #p['IpRanges'],
+                # description=next(filter(lambda r: r['CidrIp'] == self.cidr_ip, p['IpRanges']))['Description']
+            ))
+        return aws_rules
+
+    @staticmethod
+    def __to_failure_error(errors, rules):
+        if not isinstance(errors, (list, tuple)): errors = [errors]
+        if not isinstance(rules, (list, tuple)): rules = [rules]
+        return {
+            'errors': list(map(lambda er: str(er), errors)),
+            'rules': list(map(lambda r: str(r), rules))
         }
 
+    @property
+    def existing_ingress_rules(self):
+        return list(filter(lambda r: next(filter(lambda ar: r.is_ingress() and r == ar, self.aws_rules)), self.rules))
+
+    @property
+    def ingress_rules(self):
+        return list(filter(lambda r: r.is_ingress(), self.rules))
+
+    def __get_aws_ip_permissions(self, **kwargs):  # aws ip permissions generator
+        expire = kwargs.get('expire', None)
+
+        ip_ranges = kwargs.get('ip_ranges', [])
         if self.cidr_ip is not None:
             ip_ranges.append(
                 {'CidrIp': self.cidr_ip} if expire is None
-                else {'CidrIp': self.cidr_ip, 'Description': expired_at.format(f'{expire.isoformat()}{time.strftime("%z")}')}
+                else {
+                    'CidrIp': self.cidr_ip,
+                    'Description': ip_ranges_desc_prefix + f'{expire.isoformat()}{time.strftime("%z")}'
+                }
             )
-        args['IpPermissions'][0]['IpRanges'] = ip_ranges
-        return args
 
-    def __authorize(self, fn_authorize, fn_update):
+        rules = kwargs.get('rules', self.rules)
+        ip_permissions = [{
+            'IpRanges': ip_ranges if ip_ranges else rule.ip_ranges,
+            'FromPort': int(rule.from_port),
+            'ToPort': int(rule.to_port),
+            'IpProtocol': rule.protocol
+        } for rule in rules]
+
+        return {'GroupId': self.group_id, 'IpPermissions': ip_permissions} if ip_permissions else None
+
+    @helper.return_if(has_attr='error_init_aws', error_handler='process_error')
+    def authorize(self):
         now = datetime.now()
-        expire = now + timedelta(0, time_to_expire)
-        ip_permissions = self.__populate_ip_permissions_args(expire=expire)
-
-        try:
-            fn_authorize(ip_permissions)
-            return True
-        except Exception as error:
-            if not isinstance(error, ClientError):
-                raise error
-
-            error_code = error.response['Error']['Code']
-            if error_code == 'InvalidPermission.Duplicate':
-                fn_update(ip_permissions)
-            else:
-                raise error
-        return False
-
-    def authorize_ingress(self):
-        return self.__authorize(
-            lambda p: self.group.authorize_ingress(**p),
-            lambda p: self.client.update_security_group_rule_descriptions_ingress(**p)
+        expire = now + timedelta(days=0, seconds=self.time_to_expire)
+        return self.__retry(
+            fn_retries=[
+                lambda _, ips: self.aws_group.authorize_ingress(**ips),
+                lambda _, ips: self.aws_client.update_security_group_rule_descriptions_ingress(**ips)
+            ],
+            expire=expire,
+            rules=self.ingress_rules
         )
 
-    def authorize_egress(self):
-        # return self.__authorize(
-        #     lambda p: self.group.authorize_egress(p),
-        #     lambda p: self.client.update_security_group_rule_descriptions_egress(**p)
-        # )
-        raise helper.OperationNotSupportedError(f"Authorize Egress IPs not supported atm")
+    def __retry(self, fn_retries=(), **kwargs):
+        last_error, ips = None, self.__get_aws_ip_permissions(**kwargs)
 
-    def __find_permissions_by_args(self, flt):
-        permissions = self.group.ip_permissions if handle_type == 'ingress' else self.group.ip_permissions_egress
-        for p in permissions:
-            for ip_range in p['IpRanges']:
-                if flt(p, ip_range):
-                    yield p, ip_range
+        for fn_retry in fn_retries:
+            last_error = helper.get_catch(
+                fn=lambda: fn_retry(last_error, ips),
+                ignore_error=False,
+                ignore_result=True
+            ) if ips else None
+            if not last_error: break
 
-    def __find_first_permission_by_args(self):
+        if not last_error: return None
+        rules, retry_once = kwargs.get('rules', []), kwargs.get('retry_once', True)
+        if not retry_once: return self.__to_failure_error(errors=last_error, rules=rules)
+
+        last_error, failure_rules = None, []
+        for rule in rules:  # retry one by one rule
+            ips = self.__get_aws_ip_permissions(rules=[rule])
+            if not ips: continue
+
+            for fn_retry in fn_retries:
+                last_error = helper.get_catch(
+                    fn=lambda: fn_retry(last_error, ips),
+                    ignore_error=False,
+                    ignore_result=True
+                )
+                if not last_error: break
+            if last_error: failure_rules.append(self.__to_failure_error(errors=last_error, rules=rule))
+        return failure_rules
+
+    @helper.return_if(has_attr='error_init_aws')
+    def revoke(self, revoke_rules=None):
+        return self.__retry(
+            fn_retries=[
+                lambda _, ips: self.aws_group.revoke_ingress(**ips),
+                lambda _, ips: self.aws_group.revoke_ingress(**ips)
+            ],
+            rules=revoke_rules if revoke_rules else self.ingress_rules
+        )
+
+    @helper.return_if(has_attr='error_init_aws')
+    def clear(self):
+        now = datetime.now()
+        # aws_rules = list(filter(
+        #     lambda ar: next(filter(
+        #         lambda r: ar.get('description', '').startswith(ip_ranges_desc_prefix) and r == ar,
+        #         self.rules
+        #     )),
+        #     self.aws_rules
+        # ))
+
+        revoke_rules = []
+        for aws_rule in self.aws_rules:
+            # desc = aws_rule.description
+            # expired_time = parser.parse(desc[desc.startswith(ip_ranges_desc_prefix) and len(ip_ranges_desc_prefix):])
+            ip_ranges = []
+            for ip in aws_rule.ip_ranges:
+                desc = ip.get('Description', '')
+                expired_time = parser.parse(
+                    desc[desc.startswith(ip_ranges_desc_prefix) and len(ip_ranges_desc_prefix):]
+                ) if not desc else now
+                if now.timestamp() >= expired_time.timestamp(): revoke_rules.append(aws_rule)
+
+        return self.revoke(revoke_rules=revoke_rules) if revoke_rules else None
+
+
+class SecGroupRule(dict):
+
+    def __getattr__(self, name):
         try:
-            rule_set = {from_port, to_port, self.cidr_ip, protocol}
-            return next(self.__find_permissions_by_args(
-                flt=lambda p, ip_range: rule_set == {p['FromPort'], p['ToPort'], ip_range['CidrIp'], p['IpProtocol']})
-            )
-        except StopIteration:
-            return None, None
+            return self[name]
+        except KeyError as e:
+            raise AttributeError(e)
 
-    def __revoke(self, revoke_fn):
-        permission, ip_range = self.__find_first_permission_by_args()
-        if permission is None:
-            return False
+    def __setattr__(self, name, value):
+        self[name] = value
 
-        ip_permissions = self.__populate_ip_permissions_args()
-        response = revoke_fn(
-            ip_permissions)  # self.group.revoke_ingress(**ip_permissions)  # TODO can be used for revoke_egress also
-        status_code = response['ResponseMetadata']['HTTPStatusCode']
-        return status_code < 400
+    def __eq__(self, other):
+        if isinstance(self, other.__class__):
+            for p in ['type', 'from_port', 'to_port', 'protocol']:
+                # vp = getattr(self, p)
+                vp = int(getattr(self, p)) if p.endswith('port') else getattr(self, p)
+                op = int(getattr(other, p)) if p.endswith('port') else getattr(other, p)
+                # op = getattr(other, p)
+                if vp != op: return False
+            return True
+        return False
 
-    def revoke_ingress(self):
-        return self.__revoke(lambda p: self.group.revoke_ingress(**p))
+    def __hash__(self):
+        return str(self).__hash__()
 
-    def revoke_egress(self):
-        raise helper.OperationNotSupportedError(f"Revoke Egress IPs not supported atm")
+    def __str__(self):
+        return json.dumps(self)
 
-    def __clear(self, revoke_fn):
-        now, rule_set = datetime.now().timestamp(), {from_port, to_port, protocol}
-        revoke_ips, desc_prefix = [], expired_at.format("")
+    def is_ingress(self):
+        return self.type == 'ingress'
 
-        for p, ip_range in self.__find_permissions_by_args(
-                flt=lambda p, ipr: rule_set == {p['FromPort'], p['ToPort'], p['IpProtocol']}
-        ):
-            with helper.catch(ValueError):
-                desc = ip_range.get("Description", None)
-                desc = desc[desc.startswith(desc_prefix) and len(desc_prefix):] if desc is not None else desc
-                expired_time = parser.parse(desc)
-            if expired_time is not None and now >= expired_time.timestamp():
-                revoke_ips.append(ip_range)
-
-        ip_permissions = self.__populate_ip_permissions_args(ip_ranges=revoke_ips)
-        response = revoke_fn(ip_permissions)  # self.group.revoke_ingress(args)
-
-        status_code = response['ResponseMetadata']['HTTPStatusCode']
-        return status_code < 400
-
-    def clear_expired_ips_ingress(self):
-        return self.__clear(lambda args: self.group.revoke_ingress(**args))
-
-    def clear_expired_ips_egress(self):
-        raise helper.OperationNotSupportedError(f"Clear Egress IPs not supported atm")
+    def is_egress(self):
+        return self.type == 'egress'

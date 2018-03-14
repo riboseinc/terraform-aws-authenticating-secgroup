@@ -2,7 +2,7 @@
 module "lamda_clear" {
   source                = "modules/lambda"
   name                  = "${local.clear_fn_name}"
-  description           = "Clear expired source_ips in ${var.secgroup_rule_type} security_groups"
+  description = "${var.description}"
   handler               = "${module.python.clear_handler}"
   role_arn              = "${module.sts_lambda.arn}"
   zip_path              = "${module.python.path}"
@@ -15,7 +15,7 @@ resource "aws_cloudwatch_event_rule" "clear" {
   ]
 
   name                = "${local.clear_event_rule_name}"
-  description         = "clean up expired ips in security_groups"
+  description="${var.description}"
   schedule_expression = "${local.clear_event_rate}"
 }
 

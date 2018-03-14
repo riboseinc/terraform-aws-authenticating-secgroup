@@ -14,8 +14,7 @@ output "execution_resources" {
 output "lambda_names" {
   value       = [
     "${module.lamda_authorize.fn_name}",
-    "${module.lamda_revoke.fn_name}",
-    "${module.lamda_clear.fn_name}"
+    "${module.lamda_revoke.fn_name}"
   ]
   description = "Lambda function names"
 }

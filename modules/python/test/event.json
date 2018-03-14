@@ -1,0 +1,11 @@
+{
+    "//": [
+        "API Gateway Proxy Request Event https://docs.aws.amazon.com/lambda/latest/dg/eventsources.html"
+    ],
+
+    "requestContext": {
+        "identity": {
+            "sourceIp": "171.249.234.216"
+        }
+    }
+}
