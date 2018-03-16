@@ -69,60 +69,80 @@ Check out [examples](https://github.com/riboseinc/terraform-aws-authenticating-s
 module "dynamic-secgroup" {
   source = "riboseinc/authenticating-secgroup/aws"
 
-  // prefix string used in named resources
-  name_prefix             = "getting-started-"
+  name            = "example-terraform-aws-authenticating-secgroup"
 
-  aws_account_id          = "${var.aws_account_id}"
-  aws_region              = "us-west-2"
+  # Description of this secgroup
+  description     = "example usage of terraform-aws-authenticating-secgroup"
 
-  // Description of this secgroup
-  description             = "${var.description}"
+  //  # Time to expiry for every rule.
+  time_to_expire  = 600
 
-  // Where to add the rules to
-  security-groups = [
-    "${aws_security_group.instance_group_1_ssh.id}",
-    "${aws_security_group.instance_group_2_ssh.id}"
+  security_groups = [
+    {
+      "group_ids"   = [
+        "sg-df7a88a3",
+        "sg-c9c72eb5"
+      ],
+      "rules"       = [
+        {
+          "type"      = "ingress",
+          "from_port" = 22,
+          "to_port"   = 22,
+          "protocol"  = "tcp"
+        }
+      ],
+      "region_name" = "us-west-2"
+    },
+    {
+      "group_ids"   = [
+        "sg-c9c72eb5"
+      ],
+      "rules"       = [
+        {
+          "type"      = "ingress",
+          "from_port" = 24,
+          "to_port"   = 24,
+          "protocol"  = "tcp"
+        }
+      ],
+      "region_name" = "us-west-2"
+    },
+    {
+      "group_ids"   = [
+        "sg-a1a9d8d8"
+      ],
+      "rules"       = [
+        {
+          "type"      = "ingress",
+          "from_port" = 24,
+          "to_port"   = 24,
+          "protocol"  = "tcp"
+        },
+        {
+          "type"      = "ingress",
+          "from_port" = 25,
+          "to_port"   = 25,
+          "protocol"  = "tcp"
+        }
+      ],
+      "region_name" = "us-west-1"
+    }
   ]
-
-  // Parameters for creating security group rules
-  secgroup_rule_type      = "ingress"
-  secgroup_rule_from_port = 22
-  secgroup_rule_to_port   = 22
-  secgroup_rule_protocol  = "tcp"
-
-  // Time to expiry for every rule.
-  // Default: 600 seconds.
-  time_to_expire          = 600
 }
-
-
-/** Sample "terraform.tfvars" */
-
-aws_account_id = "aws_account_id"
-aws_access_key = "aws_access_key"
-aws_secret_key = "aws_secret_key"
-aws_region = "aws_region"
-description  = "Developer SSH Access"
-
 
 /** Some outputs */
 
 output "dynamic-secgroup-api-invoke-url" {
   value = "${module.dynamic-secgroup.invoke_url}"
 }
-
-output "dynamic-secgroup-api-execution-resources" {
-  value = "${module.dynamic-secgroup.execution_resources}"
-}
 ```
 
 
-The `module.access-policy` is something like:
+The `access-policy` is something like:
 
 ```terraform
-resource "aws_iam_policy" "access_policy" {
-  name = "secgroup-access-policy"
-  description = "Policy: ${var.description}"
+resource "aws_iam_policy" "this" {
+  description = "Policy Developer SSH Access"
   policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
 }
 
@@ -133,13 +153,8 @@ data "aws_iam_policy_document" "access_policy_doc" {
       "execute-api:Invoke"
     ]
     resources = [
-      "${var.execution_resources}"
-    ]
+      "${module.dynamic-secgroup.execution_resources}"]
   }
-}
-
-output "access-policy-arn" {
-  value = "${aws_iam_policy.access_policy.arn}"
 }
 ```
 
