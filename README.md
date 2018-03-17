@@ -66,6 +66,12 @@ Steps:
 Check out [examples](https://github.com/riboseinc/terraform-aws-authenticating-secgroup/tree/master/examples) for more details
 
 ```terraform
+/* where should this API deployed to, more info https://www.terraform.io/docs/providers/aws */
+provider "aws" {
+  region  = "us-west-2"
+}
+
+/* main configuration */
 module "dynamic-secgroup" {
   source = "riboseinc/authenticating-secgroup/aws"
 
@@ -130,17 +136,7 @@ module "dynamic-secgroup" {
   ]
 }
 
-/** Some outputs */
-
-output "dynamic-secgroup-api-invoke-url" {
-  value = "${module.dynamic-secgroup.invoke_url}"
-}
-```
-
-
-The `access-policy` is something like:
-
-```terraform
+/* policy */
 resource "aws_iam_policy" "this" {
   description = "Policy Developer SSH Access"
   policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
@@ -156,7 +152,15 @@ data "aws_iam_policy_document" "access_policy_doc" {
       "${module.dynamic-secgroup.execution_resources}"]
   }
 }
+
+/** Some outputs */
+
+output "dynamic-secgroup-api-invoke-url" {
+  value = "${module.dynamic-secgroup.invoke_url}"
+}
 ```
+
+
 
 ### Bash to execute the API
 Check out [aws-authenticating-secgroup-scripts](https://github.com/riboseinc/aws-authenticating-secgroup-scripts)
