@@ -43,31 +43,38 @@ def handler(fn_handler, action, event):
     return response
 
 
-def return_if(**kwargs):
-    def wrap(func):
-        def wrapped_func(obj, *func_args, **func_kwargs):
-            has_attr = kwargs.get('has_attr', None)
-            if has_attr and hasattr(obj, has_attr):
-                return_attr = kwargs.get('return_attr', None)
-                if return_attr and hasattr(obj, return_attr): return getattr(obj, return_attr)
-                return getattr(obj, has_attr)
+# def return_if(**kwargs):
+#     def wrap(func):
+#         def wrapped_func(obj, *func_args, **func_kwargs):
+#             has_attr = kwargs.get('has_attr', None)
+#             if has_attr and hasattr(obj, has_attr):
+#                 return_attr = kwargs.get('return_attr', None)
+#                 if return_attr and hasattr(obj, return_attr): return getattr(obj, return_attr)
+#                 return getattr(obj, has_attr)
+#
+#             error_handler = kwargs.get('error_handler', None)
+#             try:
+#                 return func(obj, *func_args, **func_kwargs)
+#             except Exception as error:
+#                 if error_handler and hasattr(obj, error_handler):
+#                     return getattr(obj, error_handler)(error, *func_args, **func_kwargs)
+#                 else:
+#                     raise error
+#
+#         return wrapped_func
+#
+#     return wrap
 
-            error_handler = kwargs.get('error_handler', None)
-            try:
-                return func(obj, *func_args, **func_kwargs)
-            except Exception as error:
-                if error_handler and hasattr(obj, error_handler):
-                    return getattr(obj, error_handler)(error, *func_args, **func_kwargs)
-                else: raise error
 
-        return wrapped_func
-
-    return wrap
+def json_array_strip(json_str):
+    j = json_str.find("[")
+    k = json_str.rfind("]") + 1
+    return json_str[j:k]
 
 
 class OperationNotSupportedError(Exception):
     pass
 
 
-class NPE(Exception):
+class AwsApiError(Exception):
     pass

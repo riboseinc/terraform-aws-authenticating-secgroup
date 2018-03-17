@@ -1,5 +1,4 @@
 import json
-
 import helper
 
 
@@ -7,6 +6,8 @@ class Arguments:
 
     def __init__(self):
         self.cidr_ip = self.source_ip = None
+        self.security_groups_dict = {}
+
         self.__region_names = [None]
         self.__event = None
         self.__security_groups = None
@@ -28,26 +29,25 @@ class Arguments:
     @property
     def security_groups(self):
         if self.__security_groups is None:
-            self.security_groups = json.loads('''${security_groups}''')
-            # self.__security_groups = self.normalize_groups(json.loads('''${security_groups}'''))
+            self.security_groups = json.loads(helper.json_array_strip('''${security_groups}'''))
         return self.__security_groups
 
     @security_groups.setter
     def security_groups(self, groups):
         self.__security_groups = self.normalize_groups(groups)
 
-    @staticmethod
-    def normalize_groups(groups):
-        security_groups = {}
+    def normalize_groups(self, groups):
+        self.security_groups_dict = {}
         for group in groups:
             for group_id in group['group_ids']:
-                security_group = security_groups.get(group_id, {})
+                security_group = self.security_groups_dict.get(group_id, {})
                 rules = security_group.get('rules', []) + group['rules']
-                security_groups[group_id] = {
+                self.security_groups_dict[group_id] = {
                     'rules': rules,
+                    'group_id': group_id,
                     'region_name': group['region_name']
                 }
-        return security_groups
+        return [rule for _, rule in self.security_groups_dict.items()]
 
     @property
     def time_to_expire(self):
