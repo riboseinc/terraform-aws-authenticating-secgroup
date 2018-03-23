@@ -1,54 +1,12 @@
 import time
 from datetime import datetime, timedelta
 
-import boto3
 from dateutil import parser
-import json
 
 import args
 import helper
-from itertools import groupby
 
 ip_ranges_desc_prefix = 'expired at '
-
-
-# class DynaSecGroups:
-#
-#     def __init__(self):
-#         self.__sec_groups = []
-#
-#     @property
-#     def sec_groups(self):
-#         if self.__sec_groups: return self.__sec_groups
-#         self.__sec_groups = []
-#         region_rules = groupby(args.arguments.security_groups, lambda r: r['region_name'])
-#         for region_name, security_groups in region_rules:
-#             security_groups = [sg for sg in security_groups]
-#             group_ids = list(map(lambda sg: sg['group_id'], security_groups))
-#
-#             ec2 = boto3.resource('ec2', region_name=region_name)
-#             result_set = ec2.meta.client.describe_security_groups(Filters=[{'Name': 'group-id', 'Values': group_ids}])
-#             if not result_set['SecurityGroups']: continue
-#
-#             self.__sec_groups += [SecGroup(
-#                 aws_client=ec2.meta.client,
-#                 aws_group_dict=aws_group_dict,
-#                 rules=next(filter(lambda sg: sg['group_id'] == aws_group_dict['GroupId'], security_groups))['rules'])
-#                 for aws_group_dict in result_set['SecurityGroups']]
-#         return self.__sec_groups
-#
-#     def __process(self, fn_process):
-#         for sec_group in self.sec_groups:
-#             helper.get_catch(fn=lambda: fn_process(sec_group))
-#
-#     def authorize(self):
-#         return self.__process(lambda sg: sg.authorize())
-#
-#     def revoke(self):
-#         return self.__process(lambda sg: sg.revoke())
-#
-#     def clear(self):
-#         return self.__process(lambda sg: sg.clear())
 
 
 class SecGroup:
@@ -126,7 +84,8 @@ class SecGroup:
             rules=self.ingress_rules
         )
 
-    def __retry(self, fn_retries=(), **kwargs):
+    def __retry(self, **kwargs):
+        fn_retries = kwargs.get('fn_retries')
         error, ips = None, self.__get_aws_ip_permissions(**kwargs)
         for fn_retry in fn_retries:
             error = helper.get_catch(
@@ -153,9 +112,6 @@ class SecGroup:
     def error_rules(self):
         return list(filter(lambda r: r.error, self.rules))
 
-    def is_error(self):
-        return next(filter(lambda r: r.error, self.rules))
-
     def revoke(self, revoke_rules=None):
         return self.__retry(
             fn_retries=[lambda _, ips: self.aws_client.revoke_security_group_ingress(**ips)],
@@ -181,6 +137,7 @@ class SecGroupRule():
 
     def __init__(self, iterable=(), **kwargs):
         self.__dict__.update(iterable, **kwargs)
+        self.error = None
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):
@@ -190,18 +147,6 @@ class SecGroupRule():
                 if vp != op: return False
             return True
         return False
-
-    # def __hash__(self):
-    #     return str(self).__hash__()
-
-    def __str__(self):
-        d = dict(self.__dict__)
-        del d['error']
-        return json.dumps(d)
-
-    # @property
-    # def description(self):
-    #     return self.get('Description', '')
 
     def is_ingress(self):
         return getattr(self, 'type') == 'ingress'

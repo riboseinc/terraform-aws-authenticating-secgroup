@@ -45,10 +45,25 @@ def handler(fn_handler, action, event):
         error_groups = []
         for sec_group in sec_groups:
             error = get_catch(fn=lambda: fn_handler(sec_group), ignore_error=False, ignore_result=True)
-            if error: error_groups.append((error, sec_group))
+            if error:
+                error_groups.append({
+                    'group_id': sec_group.aws_group_id,
+                    'error': str(error)
+                })
+            elif sec_group.error_rules:
+                error_groups.append({
+                    'group_id': sec_group.aws_group_id,
+                    'rules': [{
+                        'type_from_to': f'{r.type}_{r.from_port}_{r.to_port}',
+                        'error': str(r.error)
+                    } for r in sec_group.error_rules]
+                })
 
         if error_groups:
-            response['body']['errors'] = [{'error': str(eg[0]), 'group_id': eg[1].aws_group_id} for eg in error_groups]
+            response['body']['error'] = {
+                'message': 'Some errors occurred when sending commands to AWS',
+                'groups': error_groups
+            }
             response['statusCode'] = 206  # partial groups succeed
     except exceptions.ClientError as error:
         response['statusCode'] = 500
@@ -59,29 +74,6 @@ def handler(fn_handler, action, event):
     return response
 
 
-# def return_if(**kwargs):
-#     def wrap(func):
-#         def wrapped_func(obj, *func_args, **func_kwargs):
-#             has_attr = kwargs.get('has_attr', None)
-#             if has_attr and hasattr(obj, has_attr):
-#                 return_attr = kwargs.get('return_attr', None)
-#                 if return_attr and hasattr(obj, return_attr): return getattr(obj, return_attr)
-#                 return getattr(obj, has_attr)
-#
-#             error_handler = kwargs.get('error_handler', None)
-#             try:
-#                 return func(obj, *func_args, **func_kwargs)
-#             except Exception as error:
-#                 if error_handler and hasattr(obj, error_handler):
-#                     return getattr(obj, error_handler)(error, *func_args, **func_kwargs)
-#                 else:
-#                     raise error
-#
-#         return wrapped_func
-#
-#     return wrap
-
-
 def json_array_strip(json_str):
     j = json_str.find("[")
     k = json_str.rfind("]") + 1
@@ -89,8 +81,4 @@ def json_array_strip(json_str):
 
 
 class OperationNotSupportedError(Exception):
-    pass
-
-
-class AwsApiError(Exception):
     pass
