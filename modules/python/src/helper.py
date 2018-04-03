@@ -74,10 +74,14 @@ def handler(fn_handler, action, event):
     return response
 
 
-def json_array_strip(json_str):
-    j = json_str.find("[")
-    k = json_str.rfind("]") + 1
-    return json_str[j:k]
+def try_json_loads(json_str):
+    if len(json_str) == 0:
+        return None
+
+    try:
+        return json.loads(json_str)
+    except json.decoder.JSONDecodeError:
+        return try_json_loads(json_str[1:-1])
 
 
 class OperationNotSupportedError(Exception):

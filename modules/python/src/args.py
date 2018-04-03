@@ -1,4 +1,3 @@
-import json
 import helper
 
 
@@ -29,7 +28,7 @@ class Arguments:
     @property
     def security_groups(self):
         if self.__security_groups is None:
-            self.security_groups = json.loads(helper.json_array_strip('''${security_groups}'''))
+            self.security_groups = helper.try_json_loads('''${security_groups}''')
         return self.__security_groups
 
     @security_groups.setter

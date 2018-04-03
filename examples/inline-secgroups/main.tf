@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "dynamic-secgroup" {
-  source          = "../"
+  source          = "../.."
 
   name            = "example-terraform-aws-authenticating-secgroup"
 
