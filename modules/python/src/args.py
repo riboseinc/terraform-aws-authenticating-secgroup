@@ -1,16 +1,31 @@
 import helper
+import logging
 
 
 class Arguments:
+    EXPIRED_AT = 'expired-at-%s'
 
+    # TODO add logger method
     def __init__(self):
         self.cidr_ip = self.source_ip = None
         self.security_groups_dict = {}
-
         self.__region_names = [None]
         self.__event = None
         self.__security_groups = None
         self.__time_to_expire = None
+        self.__logger = None
+
+    @property
+    def logger(self):
+        if not self.__logger:
+            self.__logger = logging.getLogger()
+            self.__logger.setLevel(helper.get_catch(
+                fn=lambda: int(logging.getLevelName("${log_level}")),
+                default="INFO",
+                ignore_result=False,
+                ignore_error=True
+            ))
+        return self.__logger
 
     @property
     def event(self):
@@ -28,7 +43,7 @@ class Arguments:
     @property
     def security_groups(self):
         if self.__security_groups is None:
-            self.security_groups = helper.try_json_loads('''${security_groups}''')
+            self.security_groups = helper.json_loads('''${security_groups}''')
         return self.__security_groups
 
     @security_groups.setter

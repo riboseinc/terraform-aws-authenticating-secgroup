@@ -1,3 +1,6 @@
+variable "log_level" {
+}
+
 variable "security_groups" {
   type    = "list"
   default = []

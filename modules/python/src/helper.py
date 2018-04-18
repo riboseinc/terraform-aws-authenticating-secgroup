@@ -42,27 +42,27 @@ def handler(fn_handler, action, event):
                 rules=next(filter(lambda sg: sg['group_id'] == aws_group_dict['GroupId'], security_groups))['rules'])
                 for aws_group_dict in result_set['SecurityGroups']]
 
-        error_groups = []
+        errors = []
         for sec_group in sec_groups:
             error = get_catch(fn=lambda: fn_handler(sec_group), ignore_error=False, ignore_result=True)
             if error:
-                error_groups.append({
+                errors.append({
                     'group_id': sec_group.aws_group_id,
-                    'error': str(error)
+                    'message': str(error)
                 })
             elif sec_group.error_rules:
-                error_groups.append({
+                errors.append({
                     'group_id': sec_group.aws_group_id,
                     'rules': [{
                         'type_from_to': f'{r.type}_{r.from_port}_{r.to_port}',
-                        'error': str(r.error)
+                        'message': r.error
                     } for r in sec_group.error_rules]
                 })
 
-        if error_groups:
+        if errors:
             response['body']['error'] = {
                 'message': 'Some errors occurred when sending commands to AWS',
-                'groups': error_groups
+                'error': errors
             }
             response['statusCode'] = 206  # partial groups succeed
     except exceptions.ClientError as error:
@@ -74,14 +74,12 @@ def handler(fn_handler, action, event):
     return response
 
 
-def try_json_loads(json_str):
-    if len(json_str) == 0:
-        return None
-
+def json_loads(json_str):
     try:
-        return json.loads(json_str)
-    except json.decoder.JSONDecodeError:
-        return try_json_loads(json_str[1:-1])
+        return json.loads(json_str) if json_str else None
+    except json.JSONDecodeError as e:
+        print(f"json_loads error: {e}")
+    return json_loads(json_str[1:-1])
 
 
 class OperationNotSupportedError(Exception):
