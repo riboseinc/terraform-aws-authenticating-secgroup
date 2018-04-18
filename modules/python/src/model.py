@@ -37,20 +37,11 @@ class SecGroup:
             )
         return self.__aws_rule
 
-    # @classmethod
-    # def by_ip_permission(cls, ipp):
-    #     ip_ranges = ipp.get('IpRanges', [])
-    #     expired_at_term = args.Arguments.EXPIRED_AT % ""
-    #     return next(filter(lambda ip_range: (
-    #             (ip_range.get('CidrIp', '') == args.arguments.cidr_ip) or
-    #             (ip_range.get('Description', '').startswith(expired_at_term))
-    #     ), ip_ranges))
-
     @property
     def ingress_rules(self):
         return list(filter(lambda r: r.is_ingress(), self.rules))
 
-    def __get_aws_ip_permissions(self, **kwargs):  # aws ip permissions generator
+    def __prepare_aws_args(self, **kwargs):
         expire = kwargs.get('expire', None)
 
         ip_ranges = kwargs.get('ip_ranges', [])
@@ -69,16 +60,7 @@ class SecGroup:
             'FromPort': int(rule.from_port),
             'ToPort': int(rule.to_port),
             'IpProtocol': rule.protocol
-        } for rule in rules]  # self.aws_group_dict.get('IpPermissions', []) +
-
-        # TOTO append rules , not replace it
-
-        # {'IpRanges': [{'CidrIp': '171.249.234.216/32', 'Description': 'expired-at-2018-04-17T12:30:30.430763+0700'}],
-        #  'FromPort': 55, 'ToPort': 55, 'IpProtocol': 'tcp'}
-
-        # {'FromPort': 55, 'IpProtocol': 'tcp',
-        #  'IpRanges': [{'CidrIp': '171.249.234.216/32', 'Description': 'expired-at-2018-04-17T12:30:30.430763+0700'}],
-        #  'Ipv6Ranges': [], 'PrefixListIds': [], 'ToPort': 55, 'UserIdGroupPairs': []}
+        } for rule in rules]
 
         aws_args = {'GroupId': self.aws_group_id, 'IpPermissions': ip_permissions} if ip_permissions else None
         args.arguments.logger.debug(f"Arguments send to aws: {aws_args}")
@@ -93,6 +75,7 @@ class SecGroup:
             for rule2 in self.aws_ingress_rules:
                 if not rule1.merge(rule2):
                     rules.append(rule2)
+        args.arguments.logger.debug(f"authorize_rules: {rules}")
 
         self.__retry(
             fn_retries=[
@@ -106,7 +89,7 @@ class SecGroup:
 
     def __retry(self, **kwargs):
         fn_retries = kwargs.get('fn_retries')
-        error, ips = None, self.__get_aws_ip_permissions(**kwargs)
+        error, ips = None, self.__prepare_aws_args(**kwargs)
 
         args.arguments.logger.debug(f"Do action for group {self.aws_group_id} all rules in once call")
 
@@ -142,32 +125,31 @@ class SecGroup:
         return list(filter(lambda r: r.error, self.rules))
 
     def revoke(self, revoke_rules=None):
+        self.__revoke(revoke_rules=self.ingress_rules)
+        args.arguments.logger.info(f"Group {self.aws_group_id} revoked, error: {self.error_rules}")
+
+    def __revoke(self, revoke_rules):
+        args.arguments.logger.debug(f"revoke_rules: {revoke_rules}")
         self.__retry(
             fn_retries=[lambda _, ips: self.aws_client.revoke_security_group_ingress(**ips)],
             rules=revoke_rules if revoke_rules else self.ingress_rules
         )
-        args.arguments.logger.info(f"Group {self.aws_group_id} revoked, error: {self.error_rules}")
 
     def clear(self):
         now = datetime.now()
-        expired_term = args.Arguments.EXPIRED_AT % ""
-
-        revoke_rules, aws_rules = [], self.aws_ingress_rules
-        args.arguments.logger.debug(f"aws_ingress_rules: {aws_rules}")
-        for aws_rule in aws_rules:
-            for ip in aws_rule.ip_ranges:
-                desc = ip.get('Description', '')
-                expired_time = parser.parse(
-                    desc[desc.startswith(expired_term) and len(expired_term):]
-                ) if not desc else now
-                args.arguments.logger.debug(f"ip: {ip} expired_time: {expired_time}")
-                if now.timestamp() >= expired_time.timestamp():
-                    args.arguments.logger.debug(f"ip: {ip} is added to revoke list")
-                    revoke_rules.append(aws_rule)
+        revoke_rules = []
+        for rule1 in self.aws_ingress_rules:
+            args.arguments.logger.debug(f"rule1: {rule1}")
+            for rule2 in self.ingress_rules:
+                if not rule1.has_same_ports(rule2):
+                    continue
+                rule1.ip_ranges = rule1.expired_ips(now)
+                if rule1.ip_ranges:
+                    revoke_rules.append(rule1)
 
         args.arguments.logger.debug(f"revoke_rules: {revoke_rules}")
         if revoke_rules:
-            self.revoke(revoke_rules=revoke_rules)
+            self.__revoke(revoke_rules=revoke_rules)
         args.arguments.logger.info(f"Group {self.aws_group_id} cleared, error: {self.error_rules}")
 
 
@@ -222,6 +204,21 @@ class SecGroupRule():
                     other_iprs.append(ipr2)
         self.ip_ranges += other_iprs
         return True
+
+    def expired_ips(self, now):
+        expired_ips = []
+        expired_term = args.Arguments.EXPIRED_AT % ""
+        for ipr in self.ip_ranges:
+            desc = ipr.get('Description', '')
+            if not desc: continue
+            try:
+                expired_time = parser.parse(desc[desc.startswith(expired_term) and len(expired_term):])
+                if now.timestamp() >= expired_time.timestamp():
+                    expired_ips.append(ipr)
+            except ValueError as e:
+                args.arguments.logger.debug(f"Ignore error {e}")
+        args.arguments.logger.debug(f"Rule: {self} has expired_ips: {expired_ips}")
+        return expired_ips
 
     def is_ingress(self):
         return getattr(self, 'type') == 'ingress'
