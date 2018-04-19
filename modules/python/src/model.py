@@ -150,7 +150,7 @@ class SecGroup:
         args.arguments.logger.debug(f"revoke_rules: {revoke_rules}")
         if revoke_rules:
             self.__revoke(revoke_rules=revoke_rules)
-        args.arguments.logger.info(f"Group {self.aws_group_id} cleared, error: {self.error_rules}")
+        args.arguments.logger.info(f"Group {self.aws_group_id} {'cleared' if revoke_rules else 'has no rule to clear'}, error: {self.error_rules}")
 
 
 class SecGroupRule():

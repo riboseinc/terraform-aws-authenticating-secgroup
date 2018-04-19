@@ -4,15 +4,10 @@ provider "aws" {
 
 module "dynamic-secgroup" {
   source          = "../../"
-
-  name            = "example-json-secgroups"
-
-  # Description of this secgroup
+  name            = "example-terraform-aws-authenticating-secgroup"
   description     = "example usage of terraform-aws-authenticating-secgroup"
-
-  # Time to expiry for every rule.
-  time_to_expire  = 600
-
+  time_to_expire  = 120
+  log_level = "DEBUG"
   security_groups = ["${file("secgroups.json")}"]
 }
 

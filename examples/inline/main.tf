@@ -11,18 +11,39 @@ module "dynamic-secgroup" {
   security_groups = [
     {
       "group_ids"   = [
+        "sg-df7a88a3",
         "sg-c9c72eb5"
       ],
       "rules"       = [
         {
           "type"      = "ingress",
-          "from_port" = 22,
-          "to_port"   = 22,
+          "from_port" = 44,
+          "to_port"   = 44,
           "protocol"  = "tcp"
         }
       ],
       "region_name" = "us-west-2"
     },
+    {
+      "group_ids"   = [
+        "sg-a1a9d8d8"
+      ],
+      "rules"       = [
+        {
+          "type"      = "ingress",
+          "from_port" = 24,
+          "to_port"   = 24,
+          "protocol"  = "tcp"
+        },
+        {
+          "type"      = "ingress",
+          "from_port" = 25,
+          "to_port"   = 25,
+          "protocol"  = "tcp"
+        }
+      ],
+      "region_name" = "us-west-1"
+    }
   ]
 
 
