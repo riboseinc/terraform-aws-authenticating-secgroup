@@ -1,3 +1,7 @@
+resource "aws_cloudwatch_log_group" "this" {
+  name       = "/aws/lambda/${var.name}"
+}
+
 resource "aws_lambda_function" "this" {
   description      = "${var.description}"
   role             = "${var.role_arn}"

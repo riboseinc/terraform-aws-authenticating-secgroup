@@ -1,13 +1,13 @@
 [
   {
     "group_ids": [
-      "sg-df7a88a3"
+      "sg-c9c72eb5"
     ],
     "rules": [
       {
         "type": "ingress",
-        "from_port": 22,
-        "to_port": 22,
+        "from_port": 55,
+        "to_port": 55,
         "protocol": "tcp"
       }
     ],

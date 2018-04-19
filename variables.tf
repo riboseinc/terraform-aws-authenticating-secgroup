@@ -23,3 +23,7 @@ variable "time_to_expire" {
   description = "Time to expiry for every rule (in seconds)"
 }
 
+variable "log_level" {
+  default = "INFO"
+  description = "Set level of Cloud Watch Log to INFO or DEBUG"
+}

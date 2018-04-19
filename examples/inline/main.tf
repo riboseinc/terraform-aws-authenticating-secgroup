@@ -1,14 +1,13 @@
+provider "aws" {
+  region  = "us-west-2"
+}
+
 module "dynamic-secgroup" {
-  source          = "../"
-
+  source          = "../.."
   name            = "example-terraform-aws-authenticating-secgroup"
-
-  # Description of this secgroup
   description     = "example usage of terraform-aws-authenticating-secgroup"
-
-  //  # Time to expiry for every rule.
-  time_to_expire  = 600
-
+  time_to_expire  = 120
+  log_level = "DEBUG"
   security_groups = [
     {
       "group_ids"   = [
@@ -18,22 +17,8 @@ module "dynamic-secgroup" {
       "rules"       = [
         {
           "type"      = "ingress",
-          "from_port" = 22,
-          "to_port"   = 22,
-          "protocol"  = "tcp"
-        }
-      ],
-      "region_name" = "us-west-2"
-    },
-    {
-      "group_ids"   = [
-        "sg-c9c72eb5"
-      ],
-      "rules"       = [
-        {
-          "type"      = "ingress",
-          "from_port" = 24,
-          "to_port"   = 24,
+          "from_port" = 44,
+          "to_port"   = 44,
           "protocol"  = "tcp"
         }
       ],
@@ -60,6 +45,8 @@ module "dynamic-secgroup" {
       "region_name" = "us-west-1"
     }
   ]
+
+
 }
 
 resource "aws_iam_policy" "this" {
@@ -70,11 +57,14 @@ resource "aws_iam_policy" "this" {
 data "aws_iam_policy_document" "access_policy_doc" {
   statement {
     effect    = "Allow"
+
     actions   = [
       "execute-api:Invoke"
     ]
+
     resources = [
-      "${module.dynamic-secgroup.execution_resources}"]
+      "${module.dynamic-secgroup.execution_resources}"
+    ]
   }
 }
 

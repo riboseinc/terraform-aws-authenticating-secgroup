@@ -10,7 +10,11 @@ module "sts_lambda" {
     "ec2:AuthorizeSecurityGroupIngress",
     "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
     "ec2:RevokeSecurityGroupEgress",
-    "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+    "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
+
+    "logs:CreateLogGroup",
+    "logs:CreateLogStream",
+    "logs:PutLogEvents"
   ]
   description = "used by Lambda invoke Ec2 Security Group"
 }
