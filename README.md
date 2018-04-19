@@ -65,24 +65,26 @@ Steps:
 
 Check out [examples](https://github.com/riboseinc/terraform-aws-authenticating-secgroup/tree/master/examples) for more details
 
-```terraform
-/* where should this API deployed to, more info https://www.terraform.io/docs/providers/aws */
+
+#### Provider config
+
+- where should this API deployed to, more info https://www.terraform.io/docs/providers/aws
+
+```hcl-terraform
 provider "aws" {
   region  = "us-west-2"
 }
+```
 
-/* main configuration */
+#### Inline Config
+
+```hcl-terraform
 module "dynamic-secgroup" {
-  source = "riboseinc/authenticating-secgroup/aws"
-
+  source          = "../.."
   name            = "example-terraform-aws-authenticating-secgroup"
-
-  # Description of this secgroup
   description     = "example usage of terraform-aws-authenticating-secgroup"
-
-  //  # Time to expiry for every rule.
-  time_to_expire  = 600
-
+  time_to_expire  = 120 # in seconds
+  log_level = "DEBUG"
   security_groups = [
     {
       "group_ids"   = [
@@ -92,22 +94,8 @@ module "dynamic-secgroup" {
       "rules"       = [
         {
           "type"      = "ingress",
-          "from_port" = 22,
-          "to_port"   = 22,
-          "protocol"  = "tcp"
-        }
-      ],
-      "region_name" = "us-west-2"
-    },
-    {
-      "group_ids"   = [
-        "sg-c9c72eb5"
-      ],
-      "rules"       = [
-        {
-          "type"      = "ingress",
-          "from_port" = 24,
-          "to_port"   = 24,
+          "from_port" = 44,
+          "to_port"   = 44,
           "protocol"  = "tcp"
         }
       ],
@@ -135,8 +123,83 @@ module "dynamic-secgroup" {
     }
   ]
 }
+```
 
-/* policy */
+#### Json file config
+
+- Terraform module
+
+
+```hcl-terraform
+module "dynamic-secgroup" {
+  source          = "../../"
+  name            = "example-terraform-aws-authenticating-secgroup"
+  description     = "example usage of terraform-aws-authenticating-secgroup"
+  time_to_expire  = 120
+  log_level = "DEBUG"
+  security_groups = ["${file("secgroups.json")}"]
+}
+```
+
+- Json File `secgroups.json`
+
+```json
+[
+    {
+        "group_ids": [
+            "sg-df7a88a3",
+            "sg-c9c72eb5"
+        ],
+        "rules": [
+            {
+                "type": "ingress",
+                "from_port": 77,
+                "to_port": 77,
+                "protocol": "tcp"
+            }
+        ],
+        "region_name": "us-west-2"
+    },
+    {
+        "group_ids": [
+            "sg-c9c72eb5"
+        ],
+        "rules": [
+            {
+                "type": "ingress",
+                "from_port": 33,
+                "to_port": 33,
+                "protocol": "tcp"
+            }
+        ],
+        "region_name": "us-west-2"
+    },
+    {
+        "group_ids": [
+            "sg-a1a9d8d8"
+        ],
+        "rules": [
+            {
+                "type": "ingress",
+                "from_port": 88,
+                "to_port": 88,
+                "protocol": "tcp"
+            },
+            {
+                "type": "ingress",
+                "from_port": 99,
+                "to_port": 99,
+                "protocol": "tcp"
+            }
+        ],
+        "region_name": "us-west-1"
+    }
+]
+```
+
+#### Policy Config
+
+```hcl-terraform
 resource "aws_iam_policy" "this" {
   description = "Policy Developer SSH Access"
   policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
@@ -145,22 +208,25 @@ resource "aws_iam_policy" "this" {
 data "aws_iam_policy_document" "access_policy_doc" {
   statement {
     effect    = "Allow"
+
     actions   = [
       "execute-api:Invoke"
     ]
+
     resources = [
-      "${module.dynamic-secgroup.execution_resources}"]
+      "${module.dynamic-secgroup.execution_resources}"
+    ]
   }
 }
+```
 
-/** Some outputs */
+#### Some outputs
 
+```hcl-terraform
 output "dynamic-secgroup-api-invoke-url" {
   value = "${module.dynamic-secgroup.invoke_url}"
 }
 ```
-
-
 
 ### Bash to execute the API
 Check out [aws-authenticating-secgroup-scripts](https://github.com/riboseinc/aws-authenticating-secgroup-scripts)
