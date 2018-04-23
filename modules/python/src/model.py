@@ -124,7 +124,7 @@ class SecGroup:
     def error_rules(self):
         return list(filter(lambda r: r.error, self.rules))
 
-    def revoke(self, revoke_rules=None):
+    def revoke(self):
         self.__revoke(revoke_rules=self.ingress_rules)
         args.arguments.logger.info(f"Group {self.aws_group_id} revoked, error: {self.error_rules}")
 
