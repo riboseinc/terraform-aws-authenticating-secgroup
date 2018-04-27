@@ -1,6 +1,4 @@
 locals {
-//  module_name                = "secgroups-${substr(uuid(), 24, 12)}"
-
   authorize_fn_name     = "authorize-${var.name}"
   authorize_http_method = "POST"
 
