@@ -4,8 +4,8 @@ provider "aws" {
 
 module "dynamic-secgroup" {
   source          = "../../"
-  name            = "example-terraform-aws-authenticating-secgroup"
-  description     = "example usage of terraform-aws-authenticating-secgroup"
+  name            = "example-secgroup-json"
+  description     = "example usage of terraform-aws-authenticating-secgroup json files"
   time_to_expire  = 120
   log_level = "DEBUG"
   security_groups = ["${file("secgroups.json")}"]

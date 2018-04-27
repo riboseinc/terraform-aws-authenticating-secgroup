@@ -1,14 +1,12 @@
 locals {
-  module_name                = "secgroups-${substr(uuid(), 24, 12)}"
-
-  authorize_fn_name     = "authorize-${local.module_name}"
+  authorize_fn_name     = "authorize-${var.name}"
   authorize_http_method = "POST"
 
-  revoke_fn_name        = "revoke-${local.module_name}"
+  revoke_fn_name        = "revoke-${var.name}"
   revoke_http_method    = "DELETE"
 
-  clear_fn_name         = "clear-${local.module_name}"
-  clear_event_rule_name = "clear-expired-ips-${local.module_name}"
+  clear_fn_name         = "clear-${var.name}"
+  clear_event_rule_name = "clear-expired-ips-${var.name}"
   clear_event_rate      = "rate(1 minute)"
 
 }
@@ -38,11 +36,11 @@ resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = "${module.sts_gateway.arn}"
 }
 
-//resource "aws_cloudwatch_log_group" "this" {
-//  depends_on = [
-//    "aws_api_gateway_rest_api.this"]
-//  name       = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.this.id}/${var.deployment_stage}"
-//}
+resource "aws_cloudwatch_log_group" "this" {
+  depends_on = [
+    "aws_api_gateway_rest_api.this"]
+  name       = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.this.id}/${var.deployment_stage}"
+}
 
 resource "aws_api_gateway_method_settings" "this" {
   depends_on  = [

@@ -16,17 +16,15 @@ def get_catch(fn, ignore_error=True, ignore_result=False, default=None, **kwargs
 
 def handler(fn_handler, action, event):
     args.arguments.event = event
-    response = {
-        "statusCode": 200,
-        "body": {
-            "action": action,
-            "success": True,
-            "cidr_ip": f"{args.arguments.cidr_ip}"
-        }
-    }
+
+    status_code = 200
+    success = True
+    response_errors = []
+
+    existing_sec_groups = []
+    not_found_groups = []
 
     try:
-        sec_groups = []
         region_rules = groupby(args.arguments.security_groups, lambda r: r['region_name'])
         for region_name, security_groups in region_rules:
             security_groups = [sg for sg in security_groups]
@@ -34,16 +32,21 @@ def handler(fn_handler, action, event):
 
             ec2 = boto3.resource('ec2', region_name=region_name)
             result_set = ec2.meta.client.describe_security_groups(Filters=[{'Name': 'group-id', 'Values': group_ids}])
-            if not result_set['SecurityGroups']: continue
+            if not result_set['SecurityGroups']:
+                not_found_groups += group_ids
+                continue
 
-            sec_groups += [model.SecGroup(
+            found_groups = [model.SecGroup(
                 aws_client=ec2.meta.client,
                 aws_group_dict=aws_group_dict,
                 rules=next(filter(lambda sg: sg['group_id'] == aws_group_dict['GroupId'], security_groups))['rules'])
                 for aws_group_dict in result_set['SecurityGroups']]
+            existing_sec_groups += found_groups
+
+            not_found_groups += list(set(group_ids) - set(list(map(lambda g: g.aws_group_id, found_groups))))
 
         errors = []
-        for sec_group in sec_groups:
+        for sec_group in existing_sec_groups:
             error = get_catch(fn=lambda: fn_handler(sec_group), ignore_error=False, ignore_result=True)
             if error:
                 errors.append({
@@ -59,16 +62,40 @@ def handler(fn_handler, action, event):
                     } for r in sec_group.error_rules]
                 })
 
+        if not existing_sec_groups:
+            response_errors.append({
+                'message': 'There is no group found => Ignore the action',
+                'details': f'Security groups input: {args.arguments.origin_security_groups}'
+            })
+
         if errors:
-            response['body']['error'] = {
+            response_errors.append({
                 'message': 'Some errors occurred when sending commands to AWS',
-                'error': errors
-            }
-            response['statusCode'] = 206  # partial groups succeed
+                'details': errors
+            })
+            status_code = 206  # partial groups succeed
     except exceptions.ClientError as error:
-        response['statusCode'] = 500
-        response['body']['success'] = False
-        response['body']['error'] = str(error)
+        status_code = 500
+        success = False
+        response_errors.append({"message": "Server error", "details": str(error)})
+
+    args.arguments.logger.debug(f"not_found_groups: {not_found_groups}")
+    if not_found_groups:
+        response_errors.append({
+            "message": "Unable to find some groups",
+            "details": not_found_groups
+        })
+
+    response = {
+        "statusCode": status_code,
+        "body": {
+            "action": action,
+            "success": success,
+            "cidr_ip": f"{args.arguments.cidr_ip}"
+        }
+    }
+    if response_errors:
+        response['body']['errors'] = response_errors
 
     response['body'] = json.dumps(response['body'])
     return response
@@ -78,7 +105,7 @@ def json_loads(json_str):
     try:
         return json.loads(json_str) if json_str else None
     except json.JSONDecodeError as e:
-        print(f"json_loads error: {e}")
+        args.arguments.logger.debug(f"json_loads error: {e}")
     return json_loads(json_str[1:-1])
 
 

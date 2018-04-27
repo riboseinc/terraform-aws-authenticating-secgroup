@@ -9,6 +9,8 @@ class Arguments:
     def __init__(self):
         self.cidr_ip = self.source_ip = None
         self.security_groups_dict = {}
+        self.origin_security_groups = None
+
         self.__region_names = [None]
         self.__event = None
         self.__security_groups = None
@@ -43,11 +45,13 @@ class Arguments:
     @property
     def security_groups(self):
         if self.__security_groups is None:
-            self.security_groups = helper.json_loads('''${security_groups}''')
+            self.origin_security_groups = helper.json_loads('''${security_groups}''')
+            self.security_groups = self.origin_security_groups
         return self.__security_groups
 
     @security_groups.setter
     def security_groups(self, groups):
+        self.logger.debug(f"origin security_groups: {groups}")
         self.__security_groups = self.normalize_groups(groups)
 
     def normalize_groups(self, groups):
