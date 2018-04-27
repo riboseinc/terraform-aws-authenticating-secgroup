@@ -1,14 +1,14 @@
 locals {
-  module_name                = "secgroups-${substr(uuid(), 24, 12)}"
+//  module_name                = "secgroups-${substr(uuid(), 24, 12)}"
 
-  authorize_fn_name     = "authorize-${local.module_name}"
+  authorize_fn_name     = "authorize-${var.name}"
   authorize_http_method = "POST"
 
-  revoke_fn_name        = "revoke-${local.module_name}"
+  revoke_fn_name        = "revoke-${var.name}"
   revoke_http_method    = "DELETE"
 
-  clear_fn_name         = "clear-${local.module_name}"
-  clear_event_rule_name = "clear-expired-ips-${local.module_name}"
+  clear_fn_name         = "clear-${var.name}"
+  clear_event_rule_name = "clear-expired-ips-${var.name}"
   clear_event_rate      = "rate(1 minute)"
 
 }

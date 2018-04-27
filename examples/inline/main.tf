@@ -4,8 +4,8 @@ provider "aws" {
 
 module "dynamic-secgroup" {
   source          = "../.."
-  name            = "example-terraform-aws-authenticating-secgroup"
-  description     = "example usage of terraform-aws-authenticating-secgroup"
+  name            = "example-secgroup-inline"
+  description     = "example usage of terraform-aws-authenticating-secgroup (inline)"
   time_to_expire  = 120
   log_level = "DEBUG"
   security_groups = [
@@ -23,30 +23,8 @@ module "dynamic-secgroup" {
         }
       ],
       "region_name" = "us-west-2"
-    },
-    {
-      "group_ids"   = [
-        "sg-a1a9d8d8"
-      ],
-      "rules"       = [
-        {
-          "type"      = "ingress",
-          "from_port" = 24,
-          "to_port"   = 24,
-          "protocol"  = "tcp"
-        },
-        {
-          "type"      = "ingress",
-          "from_port" = 25,
-          "to_port"   = 25,
-          "protocol"  = "tcp"
-        }
-      ],
-      "region_name" = "us-west-1"
     }
   ]
-
-
 }
 
 resource "aws_iam_policy" "this" {
