@@ -10,7 +10,7 @@ variable "name" {
 
 variable "deployment_stage" {
   default     = "dev"
-  description = "Api deployment stages, ex: staging, production..."
+  description = "API deployment stages, ex: staging, production..."
 }
 
 variable "security_groups" {

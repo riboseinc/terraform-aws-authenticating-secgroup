@@ -16,7 +16,7 @@ module "sts_lambda" {
     "logs:CreateLogStream",
     "logs:PutLogEvents"
   ]
-  description = "used by Lambda invoke Ec2 Security Group"
+  description = "used by Lambda invoke EC2 Security Group"
 }
 
 module "sts_gateway" {
@@ -33,5 +33,5 @@ module "sts_gateway" {
     "logs:GetLogEvents",
     "logs:FilterLogEvents"
   ]
-  description = "used by Api Gateway to write log (cloudwatch)"
+  description = "used by API Gateway to write log (CloudWatch)"
 }
