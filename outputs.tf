@@ -8,7 +8,7 @@ output "execution_resources" {
     "${module.gateway_authorize.execution_resource}",
     "${module.gateway_revoke.execution_resource}"
   ]
-  description = "Excution resouces arn"
+  description = "Execution resouces ARN"
 }
 
 output "lambda_names" {
@@ -23,5 +23,5 @@ output "events" {
   value       = [
     "${aws_cloudwatch_event_rule.clear.arn}"
   ]
-  description = "Event arns"
+  description = "Event ARNs"
 }
