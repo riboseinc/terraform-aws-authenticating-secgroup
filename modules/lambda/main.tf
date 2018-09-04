@@ -17,6 +17,7 @@ resource "aws_lambda_function" "this" {
 
   lifecycle {
     ignore_changes = [
+      "last_modified",
       "source_code_hash"
     ]
   }

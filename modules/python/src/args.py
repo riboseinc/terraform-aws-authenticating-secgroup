@@ -1,5 +1,6 @@
 import helper
 import logging
+import boto3
 
 
 class Arguments:
@@ -76,6 +77,14 @@ class Arguments:
     @time_to_expire.setter
     def time_to_expire(self, seconds):
         self.__time_to_expire = int(seconds)
+
+    @property
+    def accessible_users(self):
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket('test-sercroup')
+        for obj in bucket.objects.all():
+            pass
+            # print(splitext(basename(obj.key))[0])
 
 
 arguments = Arguments()
