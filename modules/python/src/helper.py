@@ -24,6 +24,21 @@ def handler(fn_handler, action, event):
     existing_sec_groups = []
     not_found_groups = []
 
+    response_403 = {
+        "statusCode": 403,
+        "body": json.dumps({
+            "action": action,
+            "success": False,
+            "cidr_ip": f"{args.arguments.cidr_ip}"
+        })
+    }
+    try:
+        if args.arguments.api_caller not in args.arguments.accessible_users:
+            return response_403
+    except exceptions.ClientError as error:
+        args.arguments.logger.error(str(error))
+        return response_403
+
     try:
         region_rules = groupby(args.arguments.security_groups, lambda r: r['region_name'])
         for region_name, security_groups in region_rules:

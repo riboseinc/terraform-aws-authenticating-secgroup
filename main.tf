@@ -64,6 +64,7 @@ module "python" {
   log_level       = "${var.log_level}"
   security_groups = "${var.security_groups}"
   time_to_expire  = "${var.time_to_expire}"
+  bucket_name = "${var.bucket_name}"
 }
 
 /**** check out "api_*.tf" ****/

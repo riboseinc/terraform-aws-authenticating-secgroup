@@ -12,6 +12,10 @@ module "sts_lambda" {
     "ec2:RevokeSecurityGroupEgress",
     "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
 
+    "s3:GetBucketLocation",
+    "s3:ListBucket",
+    "s3:GetObject",
+
     "logs:CreateLogGroup",
     "logs:CreateLogStream",
     "logs:PutLogEvents"

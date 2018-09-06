@@ -27,3 +27,5 @@ variable "log_level" {
   default = "INFO"
   description = "Set level of Cloud Watch Log to INFO or DEBUG"
 }
+
+variable "bucket_name" {}
