@@ -87,9 +87,7 @@ class Arguments:
     @property
     def accessible_users(self):
         s3 = boto3.resource('s3')
-        print('heee')
         bucket = s3.Bucket('${bucket_name}')
-        print('huu')
         users = []
         for obj in bucket.objects.all():
             user_json_str =  obj.get()['Body'].read().decode('utf-8')
