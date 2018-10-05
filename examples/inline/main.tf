@@ -8,6 +8,7 @@ module "dynamic-secgroup" {
   description     = "example usage of terraform-aws-authenticating-secgroup (inline)"
   time_to_expire  = 120
   log_level = "DEBUG"
+  bucket_name = "test-secgroup"
   security_groups = [
     {
       "group_ids"   = [
@@ -25,25 +26,6 @@ module "dynamic-secgroup" {
       "region_name" = "us-west-2"
     }
   ]
-}
-
-resource "aws_iam_policy" "this" {
-  description = "Policy Developer SSH Access"
-  policy      = "${data.aws_iam_policy_document.access_policy_doc.json}"
-}
-
-data "aws_iam_policy_document" "access_policy_doc" {
-  statement {
-    effect    = "Allow"
-
-    actions   = [
-      "execute-api:Invoke"
-    ]
-
-    resources = [
-      "${module.dynamic-secgroup.execution_resources}"
-    ]
-  }
 }
 
 output "dynamic-secgroup-api-invoke-url" {

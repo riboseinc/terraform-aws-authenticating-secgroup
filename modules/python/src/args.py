@@ -1,5 +1,6 @@
 import helper
 import logging
+import boto3
 
 
 class Arguments:
@@ -10,6 +11,7 @@ class Arguments:
         self.cidr_ip = self.source_ip = None
         self.security_groups_dict = {}
         self.origin_security_groups = None
+        self.api_caller = "SYSTEM"
 
         self.__region_names = [None]
         self.__event = None
@@ -37,9 +39,14 @@ class Arguments:
     def event(self, event):
         try:
             self.__event = event
+
+            user_arn = self.__event['requestContext']["identity"]["userArn"]
+            if user_arn:
+                self.api_caller = user_arn.split("/")[-1]
+
             self.source_ip = event['requestContext']['identity']['sourceIp']
             self.cidr_ip = f'{self.source_ip}/32'
-        except Exception as error:
+        except (KeyError, AssertionError, TypeError) as error:
             print(f"Ignore error {str(error)}")
 
     @property
@@ -76,6 +83,18 @@ class Arguments:
     @time_to_expire.setter
     def time_to_expire(self, seconds):
         self.__time_to_expire = int(seconds)
+
+    @property
+    def accessible_users(self):
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket('${bucket_name}')
+        users = []
+        for obj in bucket.objects.all():
+            user_json_str =  obj.get()['Body'].read().decode('utf-8')
+            self.logger.debug(user_json_str)
+            users += helper.json_loads(user_json_str)
+
+        return users
 
 
 arguments = Arguments()

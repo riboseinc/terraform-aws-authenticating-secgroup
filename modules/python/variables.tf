@@ -9,3 +9,5 @@ variable "security_groups" {
 variable "time_to_expire" {
   default = ""
 }
+
+variable "bucket_name" {}

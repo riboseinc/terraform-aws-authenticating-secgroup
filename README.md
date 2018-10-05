@@ -85,6 +85,12 @@ module "dynamic-secgroup" {
   description     = "example usage of terraform-aws-authenticating-secgroup"
   time_to_expire  = 120 # in seconds
   log_level = "DEBUG"
+
+  # the module will load users in all json files in this bucket
+  # sample "users.json"
+  #     ["test_user1", "test_user1"]
+  bucket_name = "your_users_json_bucket"
+
   security_groups = [
     {
       "group_ids"   = [
@@ -125,77 +131,6 @@ module "dynamic-secgroup" {
 }
 ```
 
-#### Json file config
-
-- Terraform module
-
-
-```hcl-terraform
-module "dynamic-secgroup" {
-  source          = "../../"
-  name            = "example-terraform-aws-authenticating-secgroup"
-  description     = "example usage of terraform-aws-authenticating-secgroup"
-  time_to_expire  = 120
-  log_level = "DEBUG"
-  security_groups = ["${file("secgroups.json")}"]
-}
-```
-
-- Json File `secgroups.json`
-
-```json
-[
-    {
-        "group_ids": [
-            "sg-df7a88a3",
-            "sg-c9c72eb5"
-        ],
-        "rules": [
-            {
-                "type": "ingress",
-                "from_port": 77,
-                "to_port": 77,
-                "protocol": "tcp"
-            }
-        ],
-        "region_name": "us-west-2"
-    },
-    {
-        "group_ids": [
-            "sg-c9c72eb5"
-        ],
-        "rules": [
-            {
-                "type": "ingress",
-                "from_port": 33,
-                "to_port": 33,
-                "protocol": "tcp"
-            }
-        ],
-        "region_name": "us-west-2"
-    },
-    {
-        "group_ids": [
-            "sg-a1a9d8d8"
-        ],
-        "rules": [
-            {
-                "type": "ingress",
-                "from_port": 88,
-                "to_port": 88,
-                "protocol": "tcp"
-            },
-            {
-                "type": "ingress",
-                "from_port": 99,
-                "to_port": 99,
-                "protocol": "tcp"
-            }
-        ],
-        "region_name": "us-west-1"
-    }
-]
-```
 
 #### Policy Config
 

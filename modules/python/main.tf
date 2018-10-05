@@ -6,6 +6,7 @@ resource "template_dir" "this" {
     log_level       = "${var.log_level}"
     security_groups = "${jsonencode(var.security_groups)}"
     time_to_expire  = "${var.time_to_expire}"
+    bucket_name = "${var.bucket_name}"
   }
 }
 
